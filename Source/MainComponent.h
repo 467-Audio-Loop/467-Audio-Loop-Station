@@ -1,6 +1,6 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include "AudioTrack.h"
 
 //==============================================================================
 /*
@@ -30,11 +30,17 @@ private:
        //DN: might need later
     }
 
+    void startRecording();
+    void stopRecording();
     //==============================================================================
 
     juce::Random random;
     juce::AudioDeviceSelectorComponent audioSetupComp;
 
+    RecordingThumbnail recordingThumbnail;
+    AudioRecorder recorder{ recordingThumbnail.getAudioThumbnail() };
+    juce::TextButton recordButton{ "Record" };
+    juce::File lastRecording;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

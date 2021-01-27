@@ -12,10 +12,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                                                 false) // hide advanced options
 {
     addAndMakeVisible(audioSetupComp);
+    addAndMakeVisible(recordButton);
+    recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+    recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
-    // Make sure you set the size of the component after
-    // you add any child components.
-    setSize (800, 600);
+    recordButton.onClick = [this]
+    {
+        if (recorder.isRecording())
+            stopRecording();
+        else
+            startRecording();
+    };
+
+    addAndMakeVisible(recordingThumbnail);
+
+
 
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
@@ -30,12 +41,19 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         setAudioChannels (2, 2);
     }
 
-    deviceManager.addChangeListener(this);  // from tutorial, listener is currently unused but will need
+    deviceManager.addAudioCallback(&recorder);
+
+    deviceManager.addChangeListener(this);  // from audioDeviceManager tutorial, listener is currently unused but will need
+
+    // Make sure you set the size of the component after
+    // you add any child components.
+    setSize(800, 600);
 }
 
 MainComponent::~MainComponent()
 {
     deviceManager.removeChangeListener(this);
+    deviceManager.removeAudioCallback(&recorder);
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -124,10 +142,67 @@ void MainComponent::resized()
     audioSetupComp.setBounds(rect.removeFromLeft(proportionOfWidth(0.6f)));
     rect.reduce(10, 10);
 
-    auto topLine(rect.removeFromTop(20));
-    //cpuUsageLabel.setBounds(topLine.removeFromLeft(topLine.getWidth() / 2));
-    //cpuUsageText.setBounds(topLine);
     rect.removeFromTop(20);
 
-    //diagnosticsBox.setBounds(rect);
+    recordingThumbnail.setBounds(rect.removeFromTop(80).reduced(8));
+    recordButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
+
+
+}
+
+void MainComponent::startRecording()
+{
+    if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+    {
+        SafePointer<MainComponent> safeThis(this);
+
+        juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+            [safeThis](bool granted) mutable
+            {
+                if (granted)
+                    safeThis->startRecording();
+            });
+        return;
+    }
+
+#if (JUCE_ANDROID || JUCE_IOS)
+    auto parentDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+#else
+    auto parentDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
+#endif
+
+    lastRecording = parentDir.getNonexistentChildFile("JUCE Demo Audio Recording", ".wav");
+
+    recorder.startRecording(lastRecording);
+
+    recordButton.setButtonText("Stop");
+    recordingThumbnail.setDisplayFullThumbnail(false);
+}
+
+void MainComponent::stopRecording()
+{
+    recorder.stop();
+
+#if JUCE_CONTENT_SHARING
+    SafePointer<MainComponent> safeThis(this);
+    juce::File fileToShare = lastRecording;
+
+    juce::ContentSharer::getInstance()->shareFiles(juce::Array<juce::URL>({ juce::URL(fileToShare) }),
+        [safeThis, fileToShare](bool success, const juce::String& error)
+        {
+            if (fileToShare.existsAsFile())
+                fileToShare.deleteFile();
+
+            if (!success && error.isNotEmpty())
+            {
+                juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Sharing Error",
+                    error);
+            }
+        });
+#endif
+
+    lastRecording = juce::File();
+    recordButton.setButtonText("Record");
+    recordingThumbnail.setDisplayFullThumbnail(true);
 }
