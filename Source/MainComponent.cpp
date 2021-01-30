@@ -13,9 +13,16 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                                                 false) // hide advanced options
 {
     addAndMakeVisible(audioSetupComp);
+
+    // AF: Adds record button and paints it
     addAndMakeVisible(recordButton);
     recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
     recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
+    // AF: Adds play button and paints it
+    addAndMakeVisible(playButton);
+    playButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00ac4f));
+    playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
     recordButton.onClick = [this]
     {
@@ -24,6 +31,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         else
             startRecording();
     };
+
+    playButton.onClick = [this]
+    {
+
+    };
+
 
     addAndMakeVisible(recordingThumbnail);
 
@@ -146,7 +159,10 @@ void MainComponent::resized()
     rect.removeFromTop(20);
 
     recordingThumbnail.setBounds(rect.removeFromTop(80).reduced(8));
+
+    // AF: This is what actually makes the buttons visible
     recordButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
+    playButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
 
 
 }

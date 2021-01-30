@@ -40,6 +40,7 @@ private:
     RecordingThumbnail recordingThumbnail;
     AudioRecorder recorder{ recordingThumbnail.getAudioThumbnail() };
     juce::TextButton recordButton{ "Record" };
+    juce::TextButton playButton{ "Play" };
     juce::File lastRecording;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
