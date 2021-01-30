@@ -1,6 +1,7 @@
 #include "MainComponent.h"
 
 //==============================================================================
+// AF: Constructor declaration for MainComponent()
 MainComponent::MainComponent() : audioSetupComp(deviceManager,
                                                 0,     // minimum input channels
                                                 256,   // maximum input channels
@@ -168,9 +169,11 @@ void MainComponent::startRecording()
 #if (JUCE_ANDROID || JUCE_IOS)
     auto parentDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
 #else
+    // AF: Here it seems the user's "Documents" path is stored in parentDir
     auto parentDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
 #endif
 
+    // AF: Here it seems like the program initializes the file for recording
     lastRecording = parentDir.getNonexistentChildFile("JUCE Demo Audio Recording", ".wav");
 
     recorder.startRecording(lastRecording);
@@ -183,6 +186,7 @@ void MainComponent::stopRecording()
 {
     recorder.stop();
 
+    // AF: Ignoring this for now as it seems like something not relevant to the app
 #if JUCE_CONTENT_SHARING
     SafePointer<MainComponent> safeThis(this);
     juce::File fileToShare = lastRecording;
