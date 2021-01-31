@@ -14,15 +14,25 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 {
     addAndMakeVisible(audioSetupComp);
 
+    // AF: Initialize state enum
+    state = Stopped;
+
     // AF: Adds record button and paints it
     addAndMakeVisible(recordButton);
     recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
     recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
     // AF: Adds play button and paints it
-    addAndMakeVisible(playButton);
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00ac4f));
-    playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    addAndMakeVisible(&playButton);
+    playButton.onClick = [this] { playButtonClicked(); };
+    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    playButton.setEnabled(false);
+
+    // AF: Adds stop button and paints it
+    addAndMakeVisible(&stopButton);
+    stopButton.onClick = [this] { stopButtonClicked(); };
+    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    stopButton.setEnabled(false);
 
     recordButton.onClick = [this]
     {
@@ -32,11 +42,10 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             startRecording();
     };
 
-    playButton.onClick = [this]
-    {
-
-    };
-
+    // AF: This registers the basic formats WAV and AIFF to be read.
+    // AF: Without this, the code throws an exception because it doesn't know how to read the file.
+    formatManager.registerBasicFormats();
+    transportSource.addChangeListener(this);   
 
     addAndMakeVisible(recordingThumbnail);
 
@@ -82,6 +91,9 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     // but be careful - it will be called on the audio thread, not the GUI thread.
 
     // For more details, see the help for AudioProcessor::prepareToPlay()
+    
+    // AF: This is new as a part of adding play button functionality
+    transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -127,6 +139,16 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
             }
         }
     }
+
+    // AF: ================== Play button functionality ==================
+    if (readerSource.get() == nullptr)
+    {
+        bufferToFill.clearActiveBufferRegion();
+        return;
+    }
+
+    transportSource.getNextAudioBlock(bufferToFill);
+    // AF: ================== Play button functionality ==================
 }
 
 void MainComponent::releaseResources()
@@ -135,6 +157,10 @@ void MainComponent::releaseResources()
     // restarted due to a setting change.
 
     // For more details, see the help for AudioProcessor::releaseResources()
+
+    // AF: ================== Play button functionality ==================
+    transportSource.releaseResources();
+    // AF: ================== Play button functionality ==================
 }
 
 //==============================================================================
@@ -163,8 +189,24 @@ void MainComponent::resized()
     // AF: This is what actually makes the buttons visible
     recordButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
     playButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
+    stopButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
 
 
+}
+
+// AF: This function is essentially 'openButtonClicked()' from the 'PlayingSoundFilesTutorial', but modified
+// to get the lastRecording file instead of asking the user for a file
+void MainComponent::recordingSaved()
+{
+    auto file = lastRecording;
+    auto* reader = formatManager.createReaderFor(file);
+    if (reader != nullptr)
+    {
+        std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
+        transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);                                 
+        playButton.setEnabled(true);                                                                                
+        readerSource.reset(newSource.release());
+    }
 }
 
 void MainComponent::startRecording()
@@ -201,6 +243,8 @@ void MainComponent::startRecording()
 void MainComponent::stopRecording()
 {
     recorder.stop();
+    // AF: This activates the play button
+    recordingSaved();
 
     // AF: Ignoring this for now as it seems like something not relevant to the app
 #if JUCE_CONTENT_SHARING
@@ -222,7 +266,60 @@ void MainComponent::stopRecording()
         });
 #endif
 
-    lastRecording = juce::File();
+    // lastRecording = juce::File();
     recordButton.setButtonText("Record");
     recordingThumbnail.setDisplayFullThumbnail(true);
+}
+
+// AF: ========================= New Audio Playing Declarations ================================
+
+void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+    if (source == &transportSource)
+    {
+        if (transportSource.isPlaying())
+            changeState(Playing);
+        else
+            changeState(Stopped);
+    }
+}
+
+void MainComponent::playButtonClicked()
+{
+    changeState(Starting);
+}
+
+void MainComponent::stopButtonClicked()
+{
+    changeState(Stopping);
+}
+
+void MainComponent::changeState(TransportState newState)
+{
+    if (state != newState)
+    {
+        state = newState;
+
+        switch (state)
+        {
+        case Stopped:                           
+            stopButton.setEnabled(false);
+            playButton.setEnabled(true);
+            transportSource.setPosition(0.0);
+            break;
+
+        case Starting:                          
+            playButton.setEnabled(false);
+            transportSource.start();
+            break;
+
+        case Playing:                           
+            stopButton.setEnabled(true);
+            break;
+
+        case Stopping:                          
+            transportSource.stop();
+            break;
+        }
+    }
 }
