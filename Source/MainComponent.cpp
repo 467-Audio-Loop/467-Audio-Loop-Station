@@ -18,9 +18,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     state = Stopped;
 
     // AF: Adds record button and paints it
-    addAndMakeVisible(recordButton);
-    recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
-    recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    addAndMakeVisible(track1RecordButton);
+    track1RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+    track1RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
@@ -34,9 +34,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     stopButton.setEnabled(false);
 
-    recordButton.onClick = [this]
+    track1RecordButton.onClick = [this]
     {
-        if (recorder.isRecording())
+        if (track1Recorder.isRecording())
             stopRecording();
         else
             startRecording();
@@ -45,9 +45,11 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     // AF: This registers the basic formats WAV and AIFF to be read.
     // AF: Without this, the code throws an exception because it doesn't know how to read the file.
     formatManager.registerBasicFormats();
-    transportSource.addChangeListener(this);   
+    track1TransportSource.addChangeListener(this);   
 
-    addAndMakeVisible(recordingThumbnail);
+    
+
+    addAndMakeVisible(track1RecordingThumbnail);
 
 
 
@@ -64,19 +66,19 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         setAudioChannels (2, 2);
     }
 
-    deviceManager.addAudioCallback(&recorder);
+    deviceManager.addAudioCallback(&track1Recorder);
 
-    deviceManager.addChangeListener(this);  // from audioDeviceManager tutorial, listener is currently unused but will need
+    deviceManager.addChangeListener(this);  // DN: from audioDeviceManager tutorial, listener is currently unused but will need
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(800, 600);
+    setSize(1000, 800);
 }
 
 MainComponent::~MainComponent()
 {
     deviceManager.removeChangeListener(this);
-    deviceManager.removeAudioCallback(&recorder);
+    deviceManager.removeAudioCallback(&track1Recorder);
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -93,24 +95,16 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     // For more details, see the help for AudioProcessor::prepareToPlay()
     
     // AF: This is new as a part of adding play button functionality
-    transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    track1TransportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Your audio-processing code goes here!
-    // For more details, see the help for AudioProcessor::getNextAudioBlock()
 
-    // Right now we are not producing any data, in which case we need to clear the buffer
-    // (to prevent the output of random noise)
-    
-    //bufferToFill.clearActiveBufferRegion();  //dan commented out since processing has been added below from audioDeviceManagerTutorial:
-
+    // DN: ================== Audio passthrough code, input goes to output ==================
     auto* device = deviceManager.getCurrentAudioDevice();
-
     auto activeInputChannels = device->getActiveInputChannels();
     auto activeOutputChannels = device->getActiveOutputChannels();
-
     auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
     auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
 
@@ -140,14 +134,24 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
         }
     }
 
+
     // AF: ================== Play button functionality ==================
-    if (readerSource.get() == nullptr)
+
+    // DN: I commented this out, it was erasing the above audio passthrough
+    //      and I think what it's trying to catch is handled above
+    /*if (track1ReaderSource.get() == nullptr)
     {
-        bufferToFill.clearActiveBufferRegion();
+        bufferToFill.clearActiveBufferRegion();  
+        return;
+    }*/
+
+    //DN: Instead let's check the state and passthrough when not playing
+    if (!track1TransportSource.isPlaying())
+    {
         return;
     }
 
-    transportSource.getNextAudioBlock(bufferToFill);
+    track1TransportSource.getNextAudioBlock(bufferToFill);
     // AF: ================== Play button functionality ==================
 }
 
@@ -159,7 +163,7 @@ void MainComponent::releaseResources()
     // For more details, see the help for AudioProcessor::releaseResources()
 
     // AF: ================== Play button functionality ==================
-    transportSource.releaseResources();
+    track1TransportSource.releaseResources();
     // AF: ================== Play button functionality ==================
 }
 
@@ -178,18 +182,22 @@ void MainComponent::resized()
     // If you add any child components, this is where you should
     // update their positions.
     auto rect = getLocalBounds();
+    auto globalControlsArea = rect.removeFromTop(400);
 
-    audioSetupComp.setBounds(rect.removeFromLeft(proportionOfWidth(0.6f)));
-    rect.reduce(10, 10);
+    audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
+    auto transportControlsArea = globalControlsArea.removeFromTop(40);
+    stopButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
+    playButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
+    
 
-    rect.removeFromTop(20);
+    //audioSetupComp.setBounds(rect.removeFromLeft(proportionOfWidth(0.6f)));
+    //rect.reduce(10, 10);
 
-    recordingThumbnail.setBounds(rect.removeFromTop(80).reduced(8));
+    
+    auto track1Area = rect.removeFromTop(80);
+    track1RecordButton.setBounds(track1Area.removeFromLeft(140).reduced(10));
+    track1RecordingThumbnail.setBounds(track1Area.reduced(8));
 
-    // AF: This is what actually makes the buttons visible
-    recordButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
-    playButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
-    stopButton.setBounds(rect.removeFromTop(36).removeFromLeft(140).reduced(8));
 
 
 }
@@ -198,14 +206,16 @@ void MainComponent::resized()
 // to get the lastRecording file instead of asking the user for a file
 void MainComponent::recordingSaved()
 {
-    auto file = lastRecording;
+    auto file = track1LastRecording;
     auto* reader = formatManager.createReaderFor(file);
     if (reader != nullptr)
     {
         std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
-        transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);                                 
+        newSource->setLooping(true);  //DN: added this to make the reader loop, the transportSource then inherits this behavior
+        track1TransportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);                                 
         playButton.setEnabled(true);                                                                                
-        readerSource.reset(newSource.release());
+        track1ReaderSource.reset(newSource.release());
+   
     }
 }
 
@@ -231,53 +241,36 @@ void MainComponent::startRecording()
     auto parentDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
 #endif
 
-    // AF: Here it seems like the program initializes the file for recording
-    lastRecording = parentDir.getNonexistentChildFile("JUCE Demo Audio Recording", ".wav");
+    
+    //DN: added "if" so that after the initial file is made, subsequent records will overwrite it
+    if (!track1LastRecording.exists())
+    {
+        // AF: Here the program initializes the file for recording
+        track1LastRecording = parentDir.getNonexistentChildFile("LoopStation-Track1", ".wav");
+    }
 
-    recorder.startRecording(lastRecording);
-
-    recordButton.setButtonText("Stop");
-    recordingThumbnail.setDisplayFullThumbnail(false);
+    track1Recorder.startRecording(track1LastRecording);
+    track1RecordButton.setButtonText("Stop");
+    track1RecordingThumbnail.setDisplayFullThumbnail(false);
 }
 
 void MainComponent::stopRecording()
 {
-    recorder.stop();
-    // AF: This activates the play button
+    track1Recorder.stop();
+
     recordingSaved();
 
-    // AF: Ignoring this for now as it seems like something not relevant to the app
-#if JUCE_CONTENT_SHARING
-    SafePointer<MainComponent> safeThis(this);
-    juce::File fileToShare = lastRecording;
-
-    juce::ContentSharer::getInstance()->shareFiles(juce::Array<juce::URL>({ juce::URL(fileToShare) }),
-        [safeThis, fileToShare](bool success, const juce::String& error)
-        {
-            if (fileToShare.existsAsFile())
-                fileToShare.deleteFile();
-
-            if (!success && error.isNotEmpty())
-            {
-                juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-                    "Sharing Error",
-                    error);
-            }
-        });
-#endif
-
-    // lastRecording = juce::File();
-    recordButton.setButtonText("Record");
-    recordingThumbnail.setDisplayFullThumbnail(true);
+    track1RecordButton.setButtonText("Record");
+    track1RecordingThumbnail.setDisplayFullThumbnail(true);
 }
 
 // AF: ========================= New Audio Playing Declarations ================================
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &transportSource)
+    if (source == &track1TransportSource)
     {
-        if (transportSource.isPlaying())
+        if (track1TransportSource.isPlaying())
             changeState(Playing);
         else
             changeState(Stopped);
@@ -305,12 +298,12 @@ void MainComponent::changeState(TransportState newState)
         case Stopped:                           
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
-            transportSource.setPosition(0.0);
+            track1TransportSource.setPosition(0.0);
             break;
 
         case Starting:                          
             playButton.setEnabled(false);
-            transportSource.start();
+            track1TransportSource.start();
             break;
 
         case Playing:                           
@@ -318,7 +311,7 @@ void MainComponent::changeState(TransportState newState)
             break;
 
         case Stopping:                          
-            transportSource.stop();
+            track1TransportSource.stop();
             break;
         }
     }

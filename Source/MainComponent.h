@@ -26,10 +26,7 @@ public:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 private:
-    //void changeListenerCallback(juce::ChangeBroadcaster*) override
-    //{
-    //  //DN: might need later
-    //}
+
     // AF: enum responsible to change the states of play and stop buttons
     enum TransportState
     {
@@ -54,18 +51,23 @@ private:
     juce::Random random;
     juce::AudioDeviceSelectorComponent audioSetupComp;
 
-    RecordingThumbnail recordingThumbnail;
-    AudioRecorder recorder{ recordingThumbnail.getAudioThumbnail() };
-    juce::TextButton recordButton{ "Record" };
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
 
+    RecordingThumbnail track1RecordingThumbnail;
+    AudioRecorder track1Recorder{ track1RecordingThumbnail.getAudioThumbnail() };
+    juce::TextButton track1RecordButton{ "Record" };
+    juce::TextButton track2RecordButton{ "Record" };
+
+
     juce::AudioFormatManager formatManager;
-    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
-    juce::AudioTransportSource transportSource;
+    std::unique_ptr<juce::AudioFormatReaderSource> track1ReaderSource;
+    juce::AudioTransportSource track1TransportSource;
+    std::unique_ptr<juce::AudioFormatReaderSource> track2ReaderSource;
+    juce::AudioTransportSource track2TransportSource;
     TransportState state;
 
-    juce::File lastRecording;
+    juce::File track1LastRecording;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
