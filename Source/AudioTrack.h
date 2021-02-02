@@ -12,6 +12,12 @@
 
 #include "AudioLiveScrollingDisplay.h"
 
+
+
+
+
+
+
 //==============================================================================
 /** A simple class that acts as an AudioIODeviceCallback and writes the
     incoming audio data to a WAV file.
@@ -23,6 +29,8 @@ public:
         : thumbnail(thumbnailToUpdate)
     {
         backgroundThread.startThread();
+        
+
     }
 
     ~AudioRecorder() override
@@ -129,22 +137,66 @@ private:
 };
 
 //==============================================================================
-class RecordingThumbnail : public juce::Component,
-    private juce::ChangeListener
+// DN:  I retooled what was the "RecordingThumbail" class, which was just a 
+// Component, into an AudioAppComponent that will handle each track's playback
+
+class AudioTrack : public juce::AudioAppComponent,
+    private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback
 {
 public:
-    RecordingThumbnail()
+    AudioTrack(juce::String desiredFilename)
     {
         formatManager.registerBasicFormats();
         thumbnail.addChangeListener(this);
+        transportSource.addChangeListener(this);
+        deviceManager.addAudioCallback(&recorder);
+
+        //DN: adapted from old "recordingSaved()" function, we now check if the file already exists and 
+        //just use it if it does.  Otherwise make it.
+#if (JUCE_ANDROID || JUCE_IOS)
+        auto parentDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+#else
+        // AF: Here it seems the user's "Documents" path is stored in parentDir
+        auto parentDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
+#endif
+        lastRecording = parentDir.getChildFile(desiredFilename);
+        if (!lastRecording.existsAsFile())
+        {
+            lastRecording = parentDir.getNonexistentChildFile(desiredFilename, ".wav"); 
+        }
+       
     }
 
-    ~RecordingThumbnail() override
+    ~AudioTrack() override
     {
         thumbnail.removeChangeListener(this);
+        deviceManager.removeAudioCallback(&recorder);
     }
 
-    juce::AudioThumbnail& getAudioThumbnail() { return thumbnail; }
+    //DN:: added along with AudioDeviceIOCallback to get mainComponent to tell this which tells the recorder when to start
+    // sending audio data
+    void audioDeviceIOCallback(const float** inputChannelData,
+        int numInputChannels,
+        float** outputChannelData,
+        int numOutputChannels,
+        int numSamples) override
+    {
+        recorder.audioDeviceIOCallback(inputChannelData, numInputChannels,outputChannelData, numOutputChannels,numSamples);
+    }
+
+    void audioDeviceAboutToStart(juce::AudioIODevice* device) override
+    {
+        recorder.audioDeviceAboutToStart(device);
+    }
+
+    /** Called to indicate that the device has stopped. */
+    void audioDeviceStopped() override 
+    {
+        recorder.audioDeviceStopped();
+    } 
+
+    //DN:  we don't need this anymore, using the thumbnail within the class
+    //juce::AudioThumbnail& getAudioThumbnail() { return thumbnail; }
 
     void setDisplayFullThumbnail(bool displayFull)
     {
@@ -154,8 +206,8 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(juce::Colours::darkgrey);
-        g.setColour(juce::Colours::lightgrey);
+        g.fillAll(juce::Colours::darkslategrey);
+        g.setColour(juce::Colours::cyan);
 
         if (thumbnail.getTotalLength() > 0.0)
         {
@@ -172,10 +224,100 @@ public:
         }
     }
 
+    //DN:  new functions needed
+    //==============================================================================
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override 
+    {
+        transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    }
+
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override 
+    {
+        transportSource.getNextAudioBlock(bufferToFill);
+    }
+
+    void releaseResources() override 
+    {
+        transportSource.releaseResources();
+    }
+
+    void startRecording()
+    {
+        if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+        {
+            SafePointer<AudioTrack> safeThis(this);
+
+            juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                [safeThis](bool granted) mutable
+                {
+                    if (granted)
+                        safeThis->startRecording();
+                });
+            return;
+        }
+
+        recorder.startRecording(lastRecording);
+
+        setDisplayFullThumbnail(false);
+    }
+
+    void stopRecording()
+    {
+        recorder.stop();
+
+        //DN:  This is where I put the code from the old "recordingSaved()" function 
+        auto file = lastRecording;
+        auto* reader = formatManager.createReaderFor(file);
+        if (reader != nullptr)
+        {
+            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
+            newSource->setLooping(true);  //DN: added this to make the reader loop, the transportSource then inherits this behavior
+            transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
+            readerSource.reset(newSource.release());
+
+        }
+    }
+
+    // --
+    bool isRecording()
+    {
+        return recorder.isRecording();
+    }
+
+    bool isPlaying()
+    {
+        return transportSource.isPlaying();
+    }
+
+    void setPosition(double newPosition)
+    {
+        transportSource.setPosition(newPosition);
+    }
+
+    void start()
+    {
+        transportSource.start();
+    }
+
+    void stop()
+    {
+        transportSource.stop();
+    }
+
+
+
 private:
     juce::AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{ 10 };
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
+
+    //DN: variables transferred from maincomponent
+    AudioRecorder recorder{ thumbnail };
+    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
+    juce::AudioTransportSource transportSource;
+    juce::File lastRecording;
+    juce::String filename;
+    // ---
 
     bool displayFullThumb = false;
 
@@ -183,7 +325,9 @@ private:
     {
         if (source == &thumbnail)
             repaint();
+
+        sendSynchronousChangeMessage();
     }
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RecordingThumbnail)
 };
+

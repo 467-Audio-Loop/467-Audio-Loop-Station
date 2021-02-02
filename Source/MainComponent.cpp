@@ -22,6 +22,18 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     track1RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
     track1RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
+    addAndMakeVisible(track2RecordButton);
+    track2RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+    track2RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
+    addAndMakeVisible(track3RecordButton);
+    track3RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+    track3RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
+    addAndMakeVisible(track4RecordButton);
+    track4RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+    track4RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
     playButton.onClick = [this] { playButtonClicked(); };
@@ -36,20 +48,130 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     track1RecordButton.onClick = [this]
     {
-        if (track1Recorder.isRecording())
-            stopRecording();
+        if (track1.isRecording())
+        {
+            track1.stopRecording();
+            playButton.setEnabled(true);
+            track1RecordButton.setButtonText("Record");
+            track1.setDisplayFullThumbnail(true);
+        }
         else
-            startRecording();
+        {
+            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+            {
+                SafePointer<MainComponent> safeThis(this);
+
+                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                    [safeThis](bool granted) mutable
+                    {
+                        if (granted)
+                            safeThis->track1.startRecording();
+                    });
+                return;
+            }
+            track1RecordButton.setButtonText("Stop");
+            track1.startRecording();
+        }
     };
 
-    // AF: This registers the basic formats WAV and AIFF to be read.
-    // AF: Without this, the code throws an exception because it doesn't know how to read the file.
-    formatManager.registerBasicFormats();
-    track1TransportSource.addChangeListener(this);   
+    track2RecordButton.onClick = [this]
+    {
+        if (track2.isRecording())
+        {
+            track2.stopRecording();
+            playButton.setEnabled(true);
+            track2RecordButton.setButtonText("Record");
+            track2.setDisplayFullThumbnail(true);
+        }
+        else
+        {
+            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+            {
+                SafePointer<MainComponent> safeThis(this);
 
-    
+                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                    [safeThis](bool granted) mutable
+                    {
+                        if (granted)
+                            safeThis->track2.startRecording();
+                    });
+                return;
+            }
+            track2RecordButton.setButtonText("Stop");
+            track2.startRecording();
+        }
+    };
 
-    addAndMakeVisible(track1RecordingThumbnail);
+    track3RecordButton.onClick = [this]
+    {
+        if (track3.isRecording())
+        {
+            track3.stopRecording();
+            playButton.setEnabled(true);
+            track3RecordButton.setButtonText("Record");
+            track3.setDisplayFullThumbnail(true);
+        }
+        else
+        {
+            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+            {
+                SafePointer<MainComponent> safeThis(this);
+
+                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                    [safeThis](bool granted) mutable
+                    {
+                        if (granted)
+                            safeThis->track3.startRecording();
+                    });
+                return;
+            }
+            track3RecordButton.setButtonText("Stop");
+            track3.startRecording();
+        }
+    };
+
+    track4RecordButton.onClick = [this]
+    {
+        if (track4.isRecording())
+        {
+            track4.stopRecording();
+            playButton.setEnabled(true);
+            track4RecordButton.setButtonText("Record");
+            track4.setDisplayFullThumbnail(true);
+        }
+        else
+        {
+            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+            {
+                SafePointer<MainComponent> safeThis(this);
+
+                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                    [safeThis](bool granted) mutable
+                    {
+                        if (granted)
+                            safeThis->track4.startRecording();
+                    });
+                return;
+            }
+            track4RecordButton.setButtonText("Stop");
+            track4.startRecording();
+        }
+    };
+
+    track1.addChangeListener(this);
+    track2.addChangeListener(this);
+    track3.addChangeListener(this);
+    track4.addChangeListener(this);
+
+    addAndMakeVisible(track1);
+    addAndMakeVisible(track2);
+    addAndMakeVisible(track3);
+    addAndMakeVisible(track4);
+
+    mixer.addInputSource(&track1, false);
+    mixer.addInputSource(&track2, false);
+    mixer.addInputSource(&track3, false);
+    mixer.addInputSource(&track4, false);
 
 
 
@@ -66,9 +188,14 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         setAudioChannels (2, 2);
     }
 
-    deviceManager.addAudioCallback(&track1Recorder);
+    
+    deviceManager.addAudioCallback(&track1);
+    deviceManager.addAudioCallback(&track2);
+    deviceManager.addAudioCallback(&track3);
+    deviceManager.addAudioCallback(&track4);
 
-    deviceManager.addChangeListener(this);  // DN: from audioDeviceManager tutorial, listener is currently unused but will need
+
+    deviceManager.addChangeListener(this);  
 
     // Make sure you set the size of the component after
     // you add any child components.
@@ -78,7 +205,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 MainComponent::~MainComponent()
 {
     deviceManager.removeChangeListener(this);
-    deviceManager.removeAudioCallback(&track1Recorder);
+    
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -90,12 +217,13 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     // its settings (i.e. sample rate, block size, etc) are changed.
 
     // You can use this function to initialise any resources you might need,
-    // but be careful - it will be called on the audio thread, not the GUI thread.
+    // but be careful - it will be called on the audio thread, not the GUI thread.    
 
-    // For more details, see the help for AudioProcessor::prepareToPlay()
-    
-    // AF: This is new as a part of adding play button functionality
-    track1TransportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+   /* track1.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    track2.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    track3.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    track4.prepareToPlay(samplesPerBlockExpected, sampleRate);*/
+    mixer.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -146,12 +274,16 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     }*/
 
     //DN: Instead let's check the state and passthrough when not playing
-    if (!track1TransportSource.isPlaying())
+    if (!track1.isPlaying())
     {
         return;
     }
 
-    track1TransportSource.getNextAudioBlock(bufferToFill);
+    //DN: We've added the tracks to the mixer already, so this will trigger all of them
+    mixer.getNextAudioBlock(bufferToFill);
+
+
+
     // AF: ================== Play button functionality ==================
 }
 
@@ -163,7 +295,11 @@ void MainComponent::releaseResources()
     // For more details, see the help for AudioProcessor::releaseResources()
 
     // AF: ================== Play button functionality ==================
-    track1TransportSource.releaseResources();
+    track1.releaseResources();
+    track2.releaseResources();
+    track3.releaseResources();
+    track4.releaseResources();
+    mixer.releaseResources();
     // AF: ================== Play button functionality ==================
 }
 
@@ -190,87 +326,56 @@ void MainComponent::resized()
     playButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
     
 
-    //audioSetupComp.setBounds(rect.removeFromLeft(proportionOfWidth(0.6f)));
-    //rect.reduce(10, 10);
-
     
     auto track1Area = rect.removeFromTop(80);
     track1RecordButton.setBounds(track1Area.removeFromLeft(140).reduced(10));
-    track1RecordingThumbnail.setBounds(track1Area.reduced(8));
+    track1.setBounds(track1Area.reduced(8));
+    auto track2Area = rect.removeFromTop(80);
+    track2RecordButton.setBounds(track2Area.removeFromLeft(140).reduced(10));
+    track2.setBounds(track2Area.reduced(8));
+    auto track3Area = rect.removeFromTop(80);
+    track3RecordButton.setBounds(track3Area.removeFromLeft(140).reduced(10));
+    track3.setBounds(track3Area.reduced(8));
+    auto track4Area = rect.removeFromTop(80);
+    track4RecordButton.setBounds(track4Area.removeFromLeft(140).reduced(10));
+    track4.setBounds(track4Area.reduced(8));
 
 
 
-}
 
-// AF: This function is essentially 'openButtonClicked()' from the 'PlayingSoundFilesTutorial', but modified
-// to get the lastRecording file instead of asking the user for a file
-void MainComponent::recordingSaved()
-{
-    auto file = track1LastRecording;
-    auto* reader = formatManager.createReaderFor(file);
-    if (reader != nullptr)
-    {
-        std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
-        newSource->setLooping(true);  //DN: added this to make the reader loop, the transportSource then inherits this behavior
-        track1TransportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);                                 
-        playButton.setEnabled(true);                                                                                
-        track1ReaderSource.reset(newSource.release());
-   
-    }
-}
-
-void MainComponent::startRecording()
-{
-    if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
-    {
-        SafePointer<MainComponent> safeThis(this);
-
-        juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-            [safeThis](bool granted) mutable
-            {
-                if (granted)
-                    safeThis->startRecording();
-            });
-        return;
-    }
-
-#if (JUCE_ANDROID || JUCE_IOS)
-    auto parentDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-#else
-    // AF: Here it seems the user's "Documents" path is stored in parentDir
-    auto parentDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
-#endif
-
-    
-    //DN: added "if" so that after the initial file is made, subsequent records will overwrite it
-    if (!track1LastRecording.exists())
-    {
-        // AF: Here the program initializes the file for recording
-        track1LastRecording = parentDir.getNonexistentChildFile("LoopStation-Track1", ".wav");
-    }
-
-    track1Recorder.startRecording(track1LastRecording);
-    track1RecordButton.setButtonText("Stop");
-    track1RecordingThumbnail.setDisplayFullThumbnail(false);
-}
-
-void MainComponent::stopRecording()
-{
-    track1Recorder.stop();
-
-    recordingSaved();
-
-    track1RecordButton.setButtonText("Record");
-    track1RecordingThumbnail.setDisplayFullThumbnail(true);
 }
 
 // AF: ========================= New Audio Playing Declarations ================================
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &track1TransportSource)
+    if (source == &track1)
     {
-        if (track1TransportSource.isPlaying())
+        if (track1.isPlaying())
+            changeState(Playing);
+        else
+            changeState(Stopped);
+    }
+
+    if (source == &track2)
+    {
+        if (track2.isPlaying())
+            changeState(Playing);
+        else
+            changeState(Stopped);
+    }
+
+    if (source == &track3)
+    {
+        if (track3.isPlaying())
+            changeState(Playing);
+        else
+            changeState(Stopped);
+    }
+
+    if (source == &track4)
+    {
+        if (track4.isPlaying())
             changeState(Playing);
         else
             changeState(Stopped);
@@ -298,12 +403,18 @@ void MainComponent::changeState(TransportState newState)
         case Stopped:                           
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
-            track1TransportSource.setPosition(0.0);
+            track1.setPosition(0.0);
+            track2.setPosition(0.0);
+            track3.setPosition(0.0);
+            track4.setPosition(0.0);
             break;
 
         case Starting:                          
             playButton.setEnabled(false);
-            track1TransportSource.start();
+            track1.start();
+            track2.start();
+            track3.start();
+            track4.start();
             break;
 
         case Playing:                           
@@ -311,7 +422,10 @@ void MainComponent::changeState(TransportState newState)
             break;
 
         case Stopping:                          
-            track1TransportSource.stop();
+            track1.stop();
+            track2.stop();
+            track3.stop();
+            track4.stop();
             break;
         }
     }

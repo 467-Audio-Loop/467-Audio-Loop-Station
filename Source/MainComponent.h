@@ -40,11 +40,8 @@ private:
     void changeState(TransportState newState);
 
     // AF: Functions that deal with the buttons being clicked
-    void startRecording();
-    void stopRecording();
     void playButtonClicked();
     void stopButtonClicked();
-    void recordingSaved();
 
     //==============================================================================
 
@@ -54,20 +51,22 @@ private:
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
 
-    RecordingThumbnail track1RecordingThumbnail;
-    AudioRecorder track1Recorder{ track1RecordingThumbnail.getAudioThumbnail() };
+
+    AudioTrack track1{ "Loopstation Track1.wav" };
+    AudioTrack track2{ "Loopstation Track2.wav" };
+    AudioTrack track3{ "Loopstation Track3.wav" };
+    AudioTrack track4{ "Loopstation Track4.wav" };
+
+    juce::MixerAudioSource mixer;
+
     juce::TextButton track1RecordButton{ "Record" };
     juce::TextButton track2RecordButton{ "Record" };
+    juce::TextButton track3RecordButton{ "Record" };
+    juce::TextButton track4RecordButton{ "Record" };
 
 
-    juce::AudioFormatManager formatManager;
-    std::unique_ptr<juce::AudioFormatReaderSource> track1ReaderSource;
-    juce::AudioTransportSource track1TransportSource;
-    std::unique_ptr<juce::AudioFormatReaderSource> track2ReaderSource;
-    juce::AudioTransportSource track2TransportSource;
     TransportState state;
 
-    juce::File track1LastRecording;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
