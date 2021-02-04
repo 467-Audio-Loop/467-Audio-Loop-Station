@@ -403,10 +403,10 @@ void MainComponent::changeState(TransportState newState)
         case Stopped:                           
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
-            track1.setPosition(0.0);
-            track2.setPosition(0.0);
-            track3.setPosition(0.0);
-            track4.setPosition(0.0);
+            track1.setPosition(0);
+            track2.setPosition(0);
+            track3.setPosition(0);
+            track4.setPosition(0);
             break;
 
         case Starting:                          

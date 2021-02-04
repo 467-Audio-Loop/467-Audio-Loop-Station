@@ -11,7 +11,7 @@
 #pragma once
 
 #include "AudioLiveScrollingDisplay.h"
-
+#include "LoopSource.h"
 
 
 
@@ -136,6 +136,7 @@ private:
     std::atomic<juce::AudioFormatWriter::ThreadedWriter*> activeWriter{ nullptr };
 };
 
+
 //==============================================================================
 // DN:  I retooled what was the "RecordingThumbail" class, which was just a 
 // Component, into an AudioAppComponent that will handle each track's playback
@@ -148,7 +149,7 @@ public:
     {
         formatManager.registerBasicFormats();
         thumbnail.addChangeListener(this);
-        transportSource.addChangeListener(this);
+        loopSource.addChangeListener(this);
         deviceManager.addAudioCallback(&recorder);
 
         //DN: adapted from old "recordingSaved()" function, we now check if the file already exists and 
@@ -164,7 +165,12 @@ public:
         {
             lastRecording = parentDir.getNonexistentChildFile(desiredFilename, ".wav"); 
         }
-       
+        else
+        {
+            // this will draw the recordings from last time when opening the app
+            
+            repaint();
+        }
     }
 
     ~AudioTrack() override
@@ -220,7 +226,7 @@ public:
         else
         {
             g.setFont(14.0f);
-            g.drawFittedText("(No file recorded)", getLocalBounds(), juce::Justification::centred, 2);
+           // g.drawFittedText("(No file recorded)", getLocalBounds(), juce::Justification::centred, 2);
         }
     }
 
@@ -228,17 +234,17 @@ public:
     //==============================================================================
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override 
     {
-        transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+        loopSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override 
     {
-        transportSource.getNextAudioBlock(bufferToFill);
+        loopSource.getNextAudioBlock(bufferToFill);
     }
 
     void releaseResources() override 
     {
-        transportSource.releaseResources();
+        loopSource.releaseResources();
     }
 
     void startRecording()
@@ -265,17 +271,22 @@ public:
     {
         recorder.stop();
 
-        //DN:  This is where I put the code from the old "recordingSaved()" function 
+       
         auto file = lastRecording;
-        auto* reader = formatManager.createReaderFor(file);
+        auto reader = formatManager.createReaderFor(file);
         if (reader != nullptr)
         {
-            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
-            newSource->setLooping(true);  //DN: added this to make the reader loop, the transportSource then inherits this behavior
-            transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
-            readerSource.reset(newSource.release());
+            //DN: set up a memory buffer to hold the audio for this loop file
+            juce::AudioBuffer<float>* loopBuffer = new juce::AudioBuffer<float>(reader->numChannels, reader->lengthInSamples);
+            //DN: read the audio file into the loopBuffer
+            reader->read(loopBuffer, 0, reader->lengthInSamples, 0, true, true);
+            //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
+            delete reader; 
+            // DN: send the loopBuffer object to the loopSource which will handle playback
+            loopSource.setBuffer(loopBuffer);
 
         }
+        
     }
 
     // --
@@ -286,24 +297,30 @@ public:
 
     bool isPlaying()
     {
-        return transportSource.isPlaying();
+        return loopSource.isPlaying();
     }
 
-    void setPosition(double newPosition)
+    // DN:  set position in samples now, not seconds anymore (made it an int, not a double)
+    void setPosition(juce::int64 newPosition)
     {
-        transportSource.setPosition(newPosition);
+        loopSource.setNextReadPosition(newPosition);
     }
 
     void start()
     {
-        transportSource.start();
+        loopSource.start();
     }
 
     void stop()
     {
-        transportSource.stop();
+        loopSource.stop();
     }
 
+    //Call this for all tracks to keep them in sync
+    void setMasterLoop(int tempo, int measures, int beatsPerMeasure)
+    {
+        loopSource.setMasterLoop(tempo, measures, beatsPerMeasure);
+    }
 
 
 private:
@@ -311,12 +328,10 @@ private:
     juce::AudioThumbnailCache thumbnailCache{ 10 };
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
 
-    //DN: variables transferred from maincomponent
     AudioRecorder recorder{ thumbnail };
-    std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
-    juce::AudioTransportSource transportSource;
+    LoopSource loopSource;
     juce::File lastRecording;
-    juce::String filename;
+
     // ---
 
     bool displayFullThumb = false;
