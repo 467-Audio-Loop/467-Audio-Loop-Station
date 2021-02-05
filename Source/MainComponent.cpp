@@ -51,12 +51,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         if (track1.isRecording())
         {
             track1.stopRecording();
-            playButton.setEnabled(true);
+            // AF: Only enable play button if no tracks are currently playing.
+            if (!trackCurrentlyPlaying())
+            {
+                playButton.setEnabled(true);
+            }
             track1RecordButton.setButtonText("Record");
             track1.setDisplayFullThumbnail(true);
         }
         else
         {
+            // AF: Stop track from playing if this current track is actively playing,
+            // before starting to record again over it
+            if (track1.isPlaying())
+                track1.stop();
+
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
                 SafePointer<MainComponent> safeThis(this);
@@ -79,12 +88,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         if (track2.isRecording())
         {
             track2.stopRecording();
-            playButton.setEnabled(true);
+            // AF: Only enable play button if no tracks are currently playing.
+            if (!trackCurrentlyPlaying())
+            {
+                playButton.setEnabled(true);
+            }
             track2RecordButton.setButtonText("Record");
             track2.setDisplayFullThumbnail(true);
         }
         else
         {
+            // AF: Stop track from playing if this current track is actively playing,
+            // before starting to record again over it
+            if (track2.isPlaying())
+                track2.stop();
+
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
                 SafePointer<MainComponent> safeThis(this);
@@ -107,12 +125,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         if (track3.isRecording())
         {
             track3.stopRecording();
-            playButton.setEnabled(true);
+            // AF: Only enable play button if no tracks are currently playing.
+            if (!trackCurrentlyPlaying())
+            {
+                playButton.setEnabled(true);
+            }
             track3RecordButton.setButtonText("Record");
             track3.setDisplayFullThumbnail(true);
         }
         else
         {
+            // AF: Stop track from playing if this current track is actively playing,
+            // before starting to record again over it
+            if (track3.isPlaying())
+                track3.stop();
+
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
                 SafePointer<MainComponent> safeThis(this);
@@ -135,12 +162,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         if (track4.isRecording())
         {
             track4.stopRecording();
-            playButton.setEnabled(true);
+            // AF: Only enable play button if no tracks are currently playing.
+            if (!trackCurrentlyPlaying())
+            {
+                playButton.setEnabled(true);
+            }
             track4RecordButton.setButtonText("Record");
             track4.setDisplayFullThumbnail(true);
         }
         else
         {
+            // AF: Stop track from playing if this current track is actively playing,
+            // before starting to record again over it
+            if (track4.isPlaying())
+                track4.stop();
+
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
                 SafePointer<MainComponent> safeThis(this);
@@ -351,34 +387,48 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &track1)
     {
-        if (track1.isPlaying())
-            changeState(Playing);
-        else
-            changeState(Stopped);
+        // AF: This if statement needs to happen in order to prevent buttons from changing states
+        // when user tries to record while audio is playing
+        if (!track1.isRecording())
+        {
+            if (track1.isPlaying())
+                changeState(Playing);
+            else
+                changeState(Stopped);
+        }
     }
 
     if (source == &track2)
     {
-        if (track2.isPlaying())
-            changeState(Playing);
-        else
-            changeState(Stopped);
+        if (!track2.isRecording())
+        {
+            if (track2.isPlaying())
+                changeState(Playing);
+            else
+                changeState(Stopped);
+        }
     }
 
     if (source == &track3)
     {
-        if (track3.isPlaying())
-            changeState(Playing);
-        else
-            changeState(Stopped);
+        if (!track3.isRecording())
+        {
+            if (track3.isPlaying())
+                changeState(Playing);
+            else
+                changeState(Stopped);
+        }
     }
 
     if (source == &track4)
     {
-        if (track4.isPlaying())
-            changeState(Playing);
-        else
-            changeState(Stopped);
+        if (!track4.isRecording())
+        {
+            if (track4.isPlaying())
+                changeState(Playing);
+            else
+                changeState(Stopped);
+        }
     }
 }
 
@@ -390,6 +440,16 @@ void MainComponent::playButtonClicked()
 void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
+}
+
+bool MainComponent::trackCurrentlyPlaying()
+{
+    if (track1.isPlaying() || track2.isPlaying() || track3.isPlaying() || track4.isPlaying())
+    {
+        return true;
+    }
+
+    return false;
 }
 
 void MainComponent::changeState(TransportState newState)

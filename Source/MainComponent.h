@@ -25,6 +25,7 @@ public:
     void resized() override;
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
+
 private:
 
     // AF: enum responsible to change the states of play and stop buttons
@@ -42,6 +43,10 @@ private:
     // AF: Functions that deal with the buttons being clicked
     void playButtonClicked();
     void stopButtonClicked();
+
+    //==============================================================================
+    // AF: Added method that returns true if any tracks are currently playing
+    bool trackCurrentlyPlaying();
 
     //==============================================================================
 

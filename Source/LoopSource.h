@@ -125,8 +125,8 @@ public:
             playing = false;
 
             int n = 500;
-            while (--n >= 0 && !stopped)
-                juce::Thread::sleep(2);
+            //while (--n >= 0 && !stopped)
+            //    juce::Thread::sleep(2);
 
             sendChangeMessage();
         }
