@@ -52,11 +52,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track1.stopRecording();
             // AF: Only enable play button if no tracks are currently playing.
-            if (!trackCurrentlyPlaying())
+            if (state == Stopped)
             {
                 playButton.setEnabled(true);
             }
+            else if (state == Playing) // AF: If playback is happening, start playing this track
+            {
+                track1.start();
+            }
             track1RecordButton.setButtonText("Record");
+
+            // AF: Enable other track "Record" buttons
+            track2RecordButton.setEnabled(true);
+            track3RecordButton.setEnabled(true);
+            track4RecordButton.setEnabled(true);
+
             track1.setDisplayFullThumbnail(true);
         }
         else
@@ -64,7 +74,10 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
             if (track1.isPlaying())
+            {
                 track1.stop();
+            }
+               
 
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
@@ -78,7 +91,14 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                     });
                 return;
             }
+
             track1RecordButton.setButtonText("Stop");
+
+            //AF: Make other record buttons greyed out
+            track2RecordButton.setEnabled(false);
+            track3RecordButton.setEnabled(false);
+            track4RecordButton.setEnabled(false);
+
             track1.startRecording();
         }
     };
@@ -89,11 +109,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track2.stopRecording();
             // AF: Only enable play button if no tracks are currently playing.
-            if (!trackCurrentlyPlaying())
+            if (state == Stopped)
             {
                 playButton.setEnabled(true);
             }
+            else // AF: If playback is happening, go ahead and start this track
+            {
+                track2.start();
+            }
             track2RecordButton.setButtonText("Record");
+
+            // AF: Enable other track "Record" buttons
+            track1RecordButton.setEnabled(true);
+            track3RecordButton.setEnabled(true);
+            track4RecordButton.setEnabled(true);
+
             track2.setDisplayFullThumbnail(true);
         }
         else
@@ -116,6 +146,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                 return;
             }
             track2RecordButton.setButtonText("Stop");
+
+            //AF: Make other record buttons greyed out
+            track1RecordButton.setEnabled(false);
+            track3RecordButton.setEnabled(false);
+            track4RecordButton.setEnabled(false);
+
             track2.startRecording();
         }
     };
@@ -126,11 +162,21 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track3.stopRecording();
             // AF: Only enable play button if no tracks are currently playing.
-            if (!trackCurrentlyPlaying())
+            if (state == Stopped)
             {
                 playButton.setEnabled(true);
             }
+            else // AF: If playback is happening, go ahead and start this track
+            {
+                track3.start();
+            }
             track3RecordButton.setButtonText("Record");
+
+            // AF: Enable other track "Record" buttons
+            track1RecordButton.setEnabled(true);
+            track2RecordButton.setEnabled(true);
+            track4RecordButton.setEnabled(true);
+
             track3.setDisplayFullThumbnail(true);
         }
         else
@@ -153,6 +199,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                 return;
             }
             track3RecordButton.setButtonText("Stop");
+
+            //AF: Make other record buttons greyed out
+            track1RecordButton.setEnabled(false);
+            track2RecordButton.setEnabled(false);
+            track4RecordButton.setEnabled(false);
+
             track3.startRecording();
         }
     };
@@ -163,11 +215,22 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track4.stopRecording();
             // AF: Only enable play button if no tracks are currently playing.
-            if (!trackCurrentlyPlaying())
+            if (state == Stopped)
             {
                 playButton.setEnabled(true);
             }
+            else // AF: If playback is happening, go ahead and start this track
+            {
+                track4.start();
+            }
+
             track4RecordButton.setButtonText("Record");
+
+            // AF: Enable other track "Record" buttons
+            track1RecordButton.setEnabled(true);
+            track2RecordButton.setEnabled(true);
+            track3RecordButton.setEnabled(true);
+
             track4.setDisplayFullThumbnail(true);
         }
         else
@@ -190,6 +253,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                 return;
             }
             track4RecordButton.setButtonText("Stop");
+
+            //AF: Make other record buttons greyed out
+            track1RecordButton.setEnabled(false);
+            track2RecordButton.setEnabled(false);
+            track3RecordButton.setEnabled(false);
+
             track4.startRecording();
         }
     };
@@ -310,7 +379,7 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     }*/
 
     //DN: Instead let's check the state and passthrough when not playing
-    if (!track1.isPlaying())
+    if (!trackCurrentlyPlaying() && !trackCurrentlyRecording())
     {
         return;
     }
@@ -445,6 +514,16 @@ void MainComponent::stopButtonClicked()
 bool MainComponent::trackCurrentlyPlaying()
 {
     if (track1.isPlaying() || track2.isPlaying() || track3.isPlaying() || track4.isPlaying())
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool MainComponent::trackCurrentlyRecording()
+{
+    if (track1.isRecording() || track2.isRecording() || track3.isRecording() || track4.isRecording())
     {
         return true;
     }

@@ -322,6 +322,17 @@ public:
         loopSource.setMasterLoop(tempo, measures, beatsPerMeasure);
     }
 
+    // AF: Same function from LoopSource.h in order to access it from MainComponent.cpp
+    void setFileStartOffset(int newStartOffset)
+    {
+        loopSource.setFileStartOffset(newStartOffset);
+    }
+
+    int getPosition()
+    {
+        return loopSource.getPosition();
+    }
+
 
 private:
     juce::AudioFormatManager formatManager;

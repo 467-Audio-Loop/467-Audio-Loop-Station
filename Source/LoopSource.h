@@ -68,6 +68,11 @@ public:
         return playing;
     }
 
+    int getPosition()
+    {
+        return position;
+    }
+
     //==============================================================================
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
     {

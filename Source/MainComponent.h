@@ -45,8 +45,10 @@ private:
     void stopButtonClicked();
 
     //==============================================================================
-    // AF: Added method that returns true if any tracks are currently playing
+    // AF: Method that returns true if any tracks are currently playing
     bool trackCurrentlyPlaying();
+    // AF: Returns true if any tracks are currently recording
+    bool trackCurrentlyRecording();
 
     //==============================================================================
 
