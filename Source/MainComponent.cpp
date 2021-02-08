@@ -56,7 +56,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             {
                 playButton.setEnabled(true);
             }
-            else if (state == Playing) // AF: If playback is happening, start playing this track
+            else // AF: If playback is happening, start playing this track
             {
                 track1.start();
             }
@@ -71,13 +71,17 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         }
         else
         {
+            // AF: Begin playback when user clicks record if it's not already playing
+            if (state == Stopped)
+            {
+                changeState(Starting);
+            }
+
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
             if (track1.isPlaying())
-            {
                 track1.stop();
-            }
-               
+
 
             if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
             {
@@ -128,6 +132,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         }
         else
         {
+            // AF: Begin playback when user clicks record if it's not already playing
+            if (state == Stopped)
+            {
+                changeState(Starting);
+            }
+
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
             if (track2.isPlaying())
@@ -181,6 +191,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         }
         else
         {
+            // AF: Begin playback when user clicks record if it's not already playing
+            if (state == Stopped)
+            {
+                changeState(Starting);
+            }
+
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
             if (track3.isPlaying())
@@ -235,6 +251,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         }
         else
         {
+            // AF: Begin playback when user clicks record if it's not already playing
+            if (state == Stopped)
+            {
+                changeState(Starting);
+            }
+
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
             if (track4.isPlaying())

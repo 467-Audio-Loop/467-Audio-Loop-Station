@@ -22,7 +22,7 @@
 /** A simple class that acts as an AudioIODeviceCallback and writes the
     incoming audio data to a WAV file.
 */
-class AudioRecorder : public juce::AudioIODeviceCallback
+class AudioRecorder : public juce::AudioIODeviceCallback, public juce::ChangeBroadcaster
 {
 public:
     AudioRecorder(juce::AudioThumbnail& thumbnailToUpdate)
@@ -344,16 +344,24 @@ private:
     juce::File lastRecording;
 
     // ---
-
     bool displayFullThumb = false;
 
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
-    {
+    {      
         if (source == &thumbnail)
+        {
             repaint();
+        }
+            
+        // AF: Stop recording once loop reaches max length
+        // This does not seem to work because for some reason the position does not get updated while it's recording
+        if (isRecording())
+        {
+            if (loopSource.getPosition() == loopSource.getMasterLoopLength())
+                stopRecording();
+        }
 
         sendSynchronousChangeMessage();
     }
-
 };
 
