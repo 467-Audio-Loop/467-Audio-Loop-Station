@@ -262,6 +262,13 @@ public:
             return;
         }
 
+        //DN: set offset to current position before recording
+        auto pos = loopSource.getPosition();
+        loopSource.setFileStartOffset(pos);
+
+        //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
+        loopSource.startRecording(); 
+       
         recorder.startRecording(lastRecording);
 
         setDisplayFullThumbnail(false);
@@ -284,6 +291,7 @@ public:
             delete reader; 
             // DN: send the loopBuffer object to the loopSource which will handle playback
             loopSource.setBuffer(loopBuffer);
+            loopSource.stopRecording();
 
         }
         
@@ -308,7 +316,7 @@ public:
 
     void start()
     {
-        loopSource.start();
+        loopSource.start(0);
     }
 
     void stop()
@@ -355,10 +363,13 @@ private:
             
         // AF: Stop recording once loop reaches max length
         // This does not seem to work because for some reason the position does not get updated while it's recording
-        if (isRecording())
+        if (source == &recorder)
         {
             if (loopSource.getPosition() == loopSource.getMasterLoopLength())
+            {
                 stopRecording();
+                repaint();
+            }
         }
 
         sendSynchronousChangeMessage();

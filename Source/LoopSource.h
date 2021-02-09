@@ -32,6 +32,7 @@ public:
         masterLoopMeasures = 2;
         masterLoopBeatsPerMeasure = 4;
         calcMasterLoopLength();
+        juce::AudioBuffer<float>* loopBuffer = new juce::AudioBuffer<float>(2, 0);  //DN: just set up an empty buffer so silent playback can happen 
     }
 
     ~LoopSource()
@@ -109,9 +110,9 @@ public:
         loopBuffer = newBuffer;
     }
 
-    void start()
+    void start(int position)
     {
-        if ((!playing) && loopBuffer != nullptr)
+        if (!playing && position < masterLoopLength)
         {
             {
                 const juce::ScopedLock sl(callbackLock);
@@ -137,6 +138,16 @@ public:
         }
     }
 
+    void startRecording()
+    {
+        recording = true;
+    }
+
+    void stopRecording()
+    {
+        recording = false;
+    }
+
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override
     {
@@ -144,11 +155,17 @@ public:
 
         bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
-        if (loopBuffer != nullptr && !stopped)
+        if (!stopped)
         {
-            const int loopBufferSize = loopBuffer->getNumSamples();
+            int loopBufferSize = 0;
+            int maxInChannels = 0;
+            if (loopBuffer != nullptr)
+            {
+                loopBufferSize = loopBuffer->getNumSamples();
+                maxInChannels = loopBuffer->getNumChannels();
+            }
+ 
 
-            int maxInChannels = loopBuffer->getNumChannels();
             int maxOutChannels = bufferToFill.buffer->getNumChannels();
 
             int pos = position;
@@ -164,7 +181,10 @@ public:
                     if (pos == masterLoopLength)
                         pos = 0;
 
-                    if ((pos > fileStartOffset) && (pos < (loopBufferSize + fileStartOffset)))
+                    //DN:  we only want to read the fileBuffer to output if it's not currently being recorded over,
+                    // and the position is within the range it should be played back
+                    //ignore null warning - should never be null since we allocate a dummy buffer in the constructor
+                    if (!recording && (pos > fileStartOffset) && (pos < (loopBufferSize + fileStartOffset)))
                         writer[sample] = loopBuffer->getSample(i%maxInChannels,pos-fileStartOffset);
 
                     pos++;
@@ -198,13 +218,18 @@ public:
         fileStartOffset = newStartOffset;
     }
 
+    void clearLoopBuffer()
+    {
+        delete loopBuffer;
+    }
+
 private:
     //==============================================================================
     juce::AudioBuffer<float>* loopBuffer = nullptr;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()
     int position = 0; //DN:  important, this tracks our position as we iterate over the masterLoopLength, which can be longer and start before the audio file
     int fileStartOffset = 0;  //DN:  set this when we want a file to always playback from the position it was recorded in masterLoop, rather than pos 0
     
-    bool stopped = true, playing = false, playAcrossAllChannels = true;
+    bool stopped = true, playing = false, recording = false, playAcrossAllChannels = true;
     double sampleRate = 44100.0;
     
 
