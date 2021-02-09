@@ -87,6 +87,13 @@ public:
         threadedWriter.reset();
     }
 
+
+    //DN:  this method will read the audio from a file and draw the thumbnail
+    void setThumbnailSource(const juce::File& file)
+    {
+        thumbnail.setSource(new juce::FileInputSource(file)); 
+    }
+
     bool isRecording() const
     {
         return activeWriter.load() != nullptr;
@@ -167,7 +174,22 @@ public:
         }
         else
         {
-            // this will draw the recordings from last time when opening the app
+            //DN:  similar code to stopRecording - we want to load in files from the previous session if they exist
+            auto file = lastRecording;
+            auto reader = formatManager.createReaderFor(file);
+            if (reader != nullptr)
+            {
+                //DN: set up a memory buffer to hold the audio for this loop file
+                auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
+                //DN: read the audio file into the loopBuffer
+                reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
+                //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
+                delete reader;
+                // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
+                loopSource.setBuffer(loopBuffer.release());
+
+                recorder.setThumbnailSource(lastRecording);
+            }
             
             repaint();
         }
@@ -234,6 +256,7 @@ public:
     //==============================================================================
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override 
     {
+        samplesPerBlock = samplesPerBlockExpected;
         loopSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
     }
 
@@ -284,13 +307,13 @@ public:
         if (reader != nullptr)
         {
             //DN: set up a memory buffer to hold the audio for this loop file
-            juce::AudioBuffer<float>* loopBuffer = new juce::AudioBuffer<float>(reader->numChannels, reader->lengthInSamples);
+            auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
             //DN: read the audio file into the loopBuffer
-            reader->read(loopBuffer, 0, reader->lengthInSamples, 0, true, true);
+            reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
             //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
             delete reader; 
-            // DN: send the loopBuffer object to the loopSource which will handle playback
-            loopSource.setBuffer(loopBuffer);
+            // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
+            loopSource.setBuffer(loopBuffer.release());
             loopSource.stopRecording();
 
         }
@@ -347,6 +370,8 @@ private:
     juce::AudioThumbnailCache thumbnailCache{ 10 };
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
 
+    int samplesPerBlock;
+
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;
     juce::File lastRecording;
@@ -362,17 +387,73 @@ private:
         }
             
         // AF: Stop recording once loop reaches max length
-        // This does not seem to work because for some reason the position does not get updated while it's recording
-        if (source == &recorder)
+        if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
         {
-            if (loopSource.getPosition() == loopSource.getMasterLoopLength())
-            {
-                stopRecording();
-                repaint();
-            }
+            stopRecording();
+            //repaint();
         }
+        
 
         sendSynchronousChangeMessage();
     }
+};
+
+
+
+
+//DN:  A simple AudioSource class where we can send the audio input in buffer form, to be read from by our main mixer
+class InputSource : public juce::AudioSource
+{
+public:
+    InputSource()
+    {
+        inputBuffer.reset(new juce::AudioBuffer<float>(2, 0));
+    }
+    ~InputSource()
+    {
+
+    }
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate)
+    {
+
+    }
+    void releaseResources()
+    {
+
+    }
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) 
+    {
+        //bufferToFill.clearActiveBufferRegion();
+
+        int loopBufferSize = inputBuffer->getNumSamples();
+        int maxInChannels = inputBuffer->getNumChannels();
+
+        int maxOutChannels = bufferToFill.buffer->getNumChannels();
+
+        for (int i = 0; i < maxOutChannels; ++i)
+        {
+            auto writer = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
+
+            for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+            {
+                writer[sample] = inputBuffer->getSample(i % maxInChannels, juce::jmin(sample,inputBuffer->getNumSamples())) * gain;
+            }
+        }
+        
+    }
+
+    void setBuffer(juce::AudioSampleBuffer* newBuffer)
+    {
+        inputBuffer.reset(newBuffer);
+    }
+
+    void setGain(double newGain)
+    {
+        gain = newGain;
+    }
+
+private:
+    std::unique_ptr<juce::AudioBuffer<float>> inputBuffer;
+    double gain = 1.0;
 };
 

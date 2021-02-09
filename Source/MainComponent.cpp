@@ -1,5 +1,7 @@
 #include "MainComponent.h"
 
+const bool includeInput = true;
+
 //==============================================================================
 // AF: Constructor declaration for MainComponent()
 MainComponent::MainComponent() : audioSetupComp(deviceManager,
@@ -50,9 +52,14 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     //We need to refactor a bit to DRY this section up
     track1RecordButton.onClick = [this]
     {
+        
+
         if (track1.isRecording())
         {
             track1.stopRecording();
+
+            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
+
             //DN: we'll always be playing if recording so we don't need this anymore
             //    also calling start here will put things out of sync
 
@@ -82,6 +89,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             {
                 changeState(Starting);
             }
+
+            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
 
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
@@ -118,6 +127,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         if (track2.isRecording())
         {
             track2.stopRecording();
+
+            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
+
            
             //// AF: Only enable play button if no tracks are currently playing.
             //if (state == Stopped)
@@ -146,6 +158,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             {
                 changeState(Starting);
             }
+
+            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
 
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
@@ -181,6 +195,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track3.stopRecording();
 
+            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
+
+
             //// AF: Only enable play button if no tracks are currently playing.
             //if (state == Stopped)
             //{
@@ -208,6 +225,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             {
                 changeState(Starting);
             }
+
+            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
 
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
@@ -243,6 +262,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         {
             track4.stopRecording();
 
+            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
 
             //// AF: Only enable play button if no tracks are currently playing.
             //if (state == Stopped)
@@ -270,6 +290,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             {
                 changeState(Starting);
             }
+
+            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
 
             // AF: Stop track from playing if this current track is actively playing,
             // before starting to record again over it
@@ -309,6 +331,11 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     addAndMakeVisible(track3);
     addAndMakeVisible(track4);
 
+    mixer.addInputSource(&inputAudio, false);
+    mixer.addInputSource(&track1, false);
+    mixer.addInputSource(&track2, false);
+    mixer.addInputSource(&track3, false);
+    mixer.addInputSource(&track4, false);
 
 
     // Some platforms require permissions to open input channels so request that here
@@ -334,10 +361,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     deviceManager.addChangeListener(this);  
 
 
-    mixer.addInputSource(&track1, false);
-    mixer.addInputSource(&track2, false);
-    mixer.addInputSource(&track3, false);
-    mixer.addInputSource(&track4, false);
 
     // Make sure you set the size of the component after
     // you add any child components.
@@ -370,14 +393,20 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
+   // bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
-   /// DN: ================== Audio passthrough code, input goes to output ==================
-   auto* device = deviceManager.getCurrentAudioDevice();
-   auto activeInputChannels = device->getActiveInputChannels();
-   auto activeOutputChannels = device->getActiveOutputChannels();
-   auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
-   auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
-   for (auto channel = 0; channel < maxOutputChannels; ++channel)
+    auto* device = deviceManager.getCurrentAudioDevice();
+    auto activeInputChannels = device->getActiveInputChannels();
+    auto activeOutputChannels = device->getActiveOutputChannels();
+    auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
+    auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
+
+    auto sourceBuffer = std::make_unique<juce::AudioBuffer<float>>(maxInputChannels, bufferToFill.numSamples);
+
+    /// DN: This code grabs the audio input, puts it in a buffer, and sends that to an AudioSource class
+    //  which can be added to or removed from our main mixer as needed
+  
+    for (auto channel = 0; channel < maxOutputChannels; ++channel)
     {
         if ((!activeOutputChannels[channel]) || maxInputChannels == 0)
         {
@@ -393,32 +422,22 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
             }
             else
             {
-                auto* inBuffer = bufferToFill.buffer->getReadPointer(actualInputChannel,
+                //DN: get the input and fill the correct channel of our source buffer
+                auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
                     bufferToFill.startSample);
-                auto* outBuffer = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+
+                auto* writer = sourceBuffer->getWritePointer(channel % maxInputChannels, bufferToFill.startSample);
 
                 for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
-                    outBuffer[sample] = inBuffer[sample];
+                    writer[sample] = reader[sample];
+
             }
         }
     }
+    //send filled buffer to the AudioSource
+    inputAudio.setBuffer(sourceBuffer.release());
 
 
-    // AF: ================== Play button functionality ==================
-
-    // DN: I commented this out, it was erasing the above audio passthrough
-    //      and I think what it's trying to catch is handled above
-    /*if (track1ReaderSource.get() == nullptr)
-    {
-        bufferToFill.clearActiveBufferRegion();  
-        return;
-    }*/
-
-    //DN: Instead let's check the state and passthrough when not playing
-    if (!trackCurrentlyPlaying() && !trackCurrentlyRecording())
-    {
-        return;
-    }
 
     //DN: We've added the tracks to the mixer already, so this will trigger all of them
     mixer.getNextAudioBlock(bufferToFill);
@@ -491,63 +510,73 @@ void MainComponent::resized()
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
+    if (source == &track1 || source == &track2 || source == &track3 || source == &track4)
+    {
+        //DN:  we need this to handle things if recording is cut off automatically
+        if (!trackCurrentlyRecording())
+        {
+            track1RecordButton.setButtonText("Record");
+            track2RecordButton.setButtonText("Record");
+            track3RecordButton.setButtonText("Record");
+            track4RecordButton.setButtonText("Record");
+
+            track1RecordButton.setEnabled(true);
+            track2RecordButton.setEnabled(true);
+            track3RecordButton.setEnabled(true);
+            track4RecordButton.setEnabled(true);
+
+            track1.setDisplayFullThumbnail(true);
+            track2.setDisplayFullThumbnail(true);
+            track3.setDisplayFullThumbnail(true);
+            track4.setDisplayFullThumbnail(true);
+
+            inputAudio.setGain(0.0);
+        }
+    }
     if (source == &track1)
     {
-        // AF: This if statement needs to happen in order to prevent buttons from changing states
-        // when user tries to record while audio is playing
-       //if (!track1.isRecording())
-      // {
         if (track1.isPlaying())
             changeState(Playing);
         else
             changeState(Stopped);
 
-      //  if (track1.isRecording())
-       //}
     }
 
     if (source == &track2)
     {
-        //if (!track2.isRecording())
-       // {
             if (track2.isPlaying())
                 changeState(Playing);
             else
                 changeState(Stopped);
-       // }
     }
 
     if (source == &track3)
     {
-     //   if (!track3.isRecording())
-     //   {
             if (track3.isPlaying())
                 changeState(Playing);
             else
                 changeState(Stopped);
-      //  }
     }
 
     if (source == &track4)
     {
-       // if (!track4.isRecording())
-       // {
             if (track4.isPlaying())
                 changeState(Playing);
             else
                 changeState(Stopped);
-      //  }
     }
 }
 
 void MainComponent::playButtonClicked()
 {
     changeState(Starting);
+    inputAudio.setGain(0.0);
 }
 
 void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
+    inputAudio.setGain(1.0);
 }
 
 bool MainComponent::trackCurrentlyPlaying()

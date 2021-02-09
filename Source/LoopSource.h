@@ -28,16 +28,15 @@ class LoopSource: public juce::PositionableAudioSource, public juce::ChangeBroad
 public:
     LoopSource()
     {
-        masterLoopTempo = 120; 
-        masterLoopMeasures = 2;
-        masterLoopBeatsPerMeasure = 4;
+        masterLoopTempo = 60; 
+        masterLoopMeasures = 3;
+        masterLoopBeatsPerMeasure = 1;
         calcMasterLoopLength();
-        juce::AudioBuffer<float>* loopBuffer = new juce::AudioBuffer<float>(2, 0);  //DN: just set up an empty buffer so silent playback can happen 
+        loopBuffer.reset(new juce::AudioBuffer<float>(2, 0));  //DN: just set up a length 0 buffer so silent playback can happen 
     }
 
     ~LoopSource()
     {
-        delete loopBuffer;
     }
 
     //==============================================================================
@@ -105,9 +104,7 @@ public:
 
     void setBuffer(juce::AudioSampleBuffer* newBuffer)
     {
-        if (loopBuffer != nullptr)
-            delete loopBuffer;
-        loopBuffer = newBuffer;
+        loopBuffer.reset(newBuffer);
     }
 
     void start(int position)
@@ -153,17 +150,14 @@ public:
     {
         const juce::ScopedLock sl(callbackLock);
 
+
         bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
         if (!stopped)
         {
-            int loopBufferSize = 0;
-            int maxInChannels = 0;
-            if (loopBuffer != nullptr)
-            {
-                loopBufferSize = loopBuffer->getNumSamples();
-                maxInChannels = loopBuffer->getNumChannels();
-            }
+            int loopBufferSize = loopBuffer->getNumSamples();
+            int maxInChannels = loopBuffer->getNumChannels();
+
  
 
             int maxOutChannels = bufferToFill.buffer->getNumChannels();
@@ -218,14 +212,9 @@ public:
         fileStartOffset = newStartOffset;
     }
 
-    void clearLoopBuffer()
-    {
-        delete loopBuffer;
-    }
-
 private:
     //==============================================================================
-    juce::AudioBuffer<float>* loopBuffer = nullptr;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()
+    std::unique_ptr<juce::AudioBuffer<float>> loopBuffer;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()
     int position = 0; //DN:  important, this tracks our position as we iterate over the masterLoopLength, which can be longer and start before the audio file
     int fileStartOffset = 0;  //DN:  set this when we want a file to always playback from the position it was recorded in masterLoop, rather than pos 0
     
