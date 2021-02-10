@@ -173,7 +173,14 @@ public:
                 for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
                 {
                     if (pos == masterLoopLength)
+                    {
                         pos = 0;
+                        beginningOfFile = true;
+                    }
+                    else
+                    {
+                        beginningOfFile = false;
+                    }
 
                     //DN:  we only want to read the fileBuffer to output if it's not currently being recorded over,
                     // and the position is within the range it should be played back
@@ -207,6 +214,14 @@ public:
         }
     }
 
+    bool readyToRecord()
+    {
+        if (beginningOfFile)
+            return true;
+
+        return false;
+    }
+
     void setFileStartOffset(int newStartOffset)
     {
         fileStartOffset = newStartOffset;
@@ -220,7 +235,9 @@ private:
     
     bool stopped = true, playing = false, recording = false, playAcrossAllChannels = true;
     double sampleRate = 44100.0;
-    
+
+    // AF: Flag to set when it's ready to record
+    bool beginningOfFile = false;
 
     juce::CriticalSection callbackLock;
 
