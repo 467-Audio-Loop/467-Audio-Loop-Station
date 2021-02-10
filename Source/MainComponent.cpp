@@ -441,10 +441,6 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
 
     //DN: We've added the tracks to the mixer already, so this will trigger all of them
     mixer.getNextAudioBlock(bufferToFill);
-
-
-
-    // AF: ================== Play button functionality ==================
 }
 
 void MainComponent::releaseResources()
@@ -453,14 +449,11 @@ void MainComponent::releaseResources()
     // restarted due to a setting change.
 
     // For more details, see the help for AudioProcessor::releaseResources()
-
-    // AF: ================== Play button functionality ==================
     track1.releaseResources();
     track2.releaseResources();
     track3.releaseResources();
     track4.releaseResources();
     mixer.releaseResources();
-    // AF: ================== Play button functionality ==================
 }
 
 //==============================================================================

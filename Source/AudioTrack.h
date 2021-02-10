@@ -103,6 +103,9 @@ public:
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override
     {
         sampleRate = device->getCurrentSampleRate();
+        // AF: Get number of input channels
+        if (device->getActiveInputChannels() != 1)
+            inputChannels = device->getActiveInputChannels().toInteger();   // AF: This is returning a number different than expected, gotta double check
     }
 
     void audioDeviceStopped() override
@@ -136,6 +139,7 @@ private:
     juce::AudioThumbnail& thumbnail;
     juce::TimeSliceThread backgroundThread{ "Audio Recorder Thread" }; // the thread that will write our audio data to disk
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter; // the FIFO used to buffer the incoming data
+    int inputChannels = 1;
     double sampleRate = 0.0;
     juce::int64 nextSampleNum = 0;
 
@@ -286,8 +290,8 @@ public:
         }
 
         //DN: set offset to current position before recording
-        auto pos = loopSource.getPosition();
-        loopSource.setFileStartOffset(pos);
+        //auto pos = loopSource.getPosition();
+        //loopSource.setFileStartOffset(pos);
 
         //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
         loopSource.startRecording(); 
@@ -388,6 +392,7 @@ private:
             
         // AF: Stop recording once loop reaches max length
         if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
+        //if (source == &thumbnail && (loopSource.getMasterLoopLength() == loopSource.getPosition()))
         {
             stopRecording();
             //repaint();
