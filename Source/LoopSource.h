@@ -169,7 +169,6 @@ public:
                 auto writer = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
 
                 pos = position; //need to reset/use a separate counter for each channel
-
                 for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
                 {
                     if (pos == masterLoopLength)

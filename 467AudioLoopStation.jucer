@@ -4,6 +4,7 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
   <MAINGROUP id="Zaz6JM" name="467AudioLoopStation">
     <GROUP id="{9BFC0E40-AAAC-86F9-39A1-F0CDF85FA472}" name="Source">
+      <FILE id="C3Ijnz" name="SaveLoad.h" compile="0" resource="0" file="Source/SaveLoad.h"/>
       <FILE id="K6VlDv" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="XpPzIC" name="LoopSource.h" compile="0" resource="0" file="Source/LoopSource.h"/>
       <FILE id="P1LioO" name="AudioTrack.h" compile="0" resource="0" file="Source/AudioTrack.h"/>

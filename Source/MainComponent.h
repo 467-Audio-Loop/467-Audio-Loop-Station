@@ -52,12 +52,15 @@ private:
 
     //==============================================================================
 
-    juce::Random random;
     juce::AudioDeviceSelectorComponent audioSetupComp;
 
+    // Global controls
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
-
+    juce::Label savedLoopsLabel{ "savedLoopLabel","Saved Loops" };
+    juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
+    DirectoryTree savedLoopDirTree;
+    juce::StringArray savedLoopFolderNames;
 
     AudioTrack track1{ "Loopstation Track1.wav" };
     AudioTrack track2{ "Loopstation Track2.wav" };

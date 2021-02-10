@@ -48,6 +48,41 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     stopButton.setEnabled(false);
 
+    //DN:  add saved loops label and dropdown menu
+    addAndMakeVisible(&savedLoopsLabel);
+    addAndMakeVisible(&savedLoopsDropdown);
+
+    //DN: Set up default directory loop wav files and feed them to Audio track objects
+    auto track1File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK1_FILENAME);
+    auto track2File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK2_FILENAME);
+    auto track3File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK3_FILENAME);
+    auto track4File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK4_FILENAME);
+    track1.setLastRecording(track1File);
+    track2.setLastRecording(track2File);
+    track3.setLastRecording(track3File);
+    track4.setLastRecording(track4File);
+
+    savedLoopFolderNames = savedLoopDirTree.getLoopFolderNamesArray();
+    savedLoopsDropdown.addItemList(savedLoopFolderNames,1);
+    savedLoopsDropdown.setSelectedId(1, juce::dontSendNotification);
+
+    track1.addChangeListener(this);
+    track2.addChangeListener(this);
+    track3.addChangeListener(this);
+    track4.addChangeListener(this);
+
+    addAndMakeVisible(track1);
+    addAndMakeVisible(track2);
+    addAndMakeVisible(track3);
+    addAndMakeVisible(track4);
+
+    mixer.addInputSource(&inputAudio, false);
+    mixer.addInputSource(&track1, false);
+    mixer.addInputSource(&track2, false);
+    mixer.addInputSource(&track3, false);
+    mixer.addInputSource(&track4, false);
+
+
 
     //We need to refactor a bit to DRY this section up
     track1RecordButton.onClick = [this]
@@ -321,22 +356,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         }
     };
 
-    track1.addChangeListener(this);
-    track2.addChangeListener(this);
-    track3.addChangeListener(this);
-    track4.addChangeListener(this);
-
-    addAndMakeVisible(track1);
-    addAndMakeVisible(track2);
-    addAndMakeVisible(track3);
-    addAndMakeVisible(track4);
-
-    mixer.addInputSource(&inputAudio, false);
-    mixer.addInputSource(&track1, false);
-    mixer.addInputSource(&track2, false);
-    mixer.addInputSource(&track3, false);
-    mixer.addInputSource(&track4, false);
-
 
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
@@ -477,7 +496,10 @@ void MainComponent::resized()
     auto transportControlsArea = globalControlsArea.removeFromTop(40);
     stopButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
     playButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
-    
+    auto savedLoopsArea = globalControlsArea.removeFromTop(100);
+    savedLoopsLabel.setBounds(savedLoopsArea.removeFromTop(50));
+    savedLoopsLabel.setJustificationType(juce::Justification::centredBottom);
+    savedLoopsDropdown.setBounds(savedLoopsArea.removeFromTop(50));
 
     
     auto track1Area = rect.removeFromTop(80);
@@ -603,14 +625,16 @@ void MainComponent::changeState(TransportState newState)
         case Stopped:                           
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
+            savedLoopsDropdown.setEnabled(true);
             track1.setPosition(0);
             track2.setPosition(0);
             track3.setPosition(0);
             track4.setPosition(0);
             break;
 
-        case Starting:    
+        case Starting: 
             playButton.setEnabled(false);
+            savedLoopsDropdown.setEnabled(false);
             track1.start();
             track2.start();
             track3.start();
