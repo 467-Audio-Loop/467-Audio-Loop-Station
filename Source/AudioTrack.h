@@ -284,6 +284,12 @@ public:
         //auto pos = loopSource.getPosition();
         //loopSource.setFileStartOffset(pos);
 
+        // AF: This essentially halts this code until loopSource is ready to record (pos == 0)
+        while (!loopSource.readyToRecord())
+        {
+            continue;
+        }
+
         //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
         loopSource.startRecording(); 
        
@@ -371,6 +377,7 @@ private:
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
 
     int samplesPerBlock;
+    bool aboutToOverflow = false;
 
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;
@@ -387,14 +394,20 @@ private:
             repaint();
         }
             
-        // AF: Stop recording once loop reaches max length
-        if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
-        //if (source == &thumbnail && (loopSource.getMasterLoopLength() == loopSource.getPosition()))
+        if (aboutToOverflow)
         {
             stopRecording();
-            //repaint();
+            aboutToOverflow = false;
         }
-        
+
+        // AF: Stop recording once loop reaches max length
+        //if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
+        if (source == &thumbnail && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
+        {
+            //stopRecording();
+            //repaint();
+            aboutToOverflow = true;
+        }
 
         sendSynchronousChangeMessage();
     }
