@@ -13,9 +13,9 @@
 #pragma once
 
 
-
-#define MASTER_LOOP_FOLDER_NAME "467Audio Loops"
-#define TEMP_LOOP_FOLDER_NAME "Default"
+#define MASTER_FOLDER_NAME "467Audio"
+#define SAVED_LOOPS_FOLDER_NAME "Saved Loops"
+#define TEMP_LOOP_FOLDER_NAME "Temp WAVs"
 #define TRACK1_FILENAME "Loopstation Track 1.wav"
 #define TRACK2_FILENAME "Loopstation Track 2.wav"
 #define TRACK3_FILENAME "Loopstation Track 3.wav"
@@ -35,16 +35,17 @@ public:
 #endif
 
         //DN: set up our folder hierarchy for saving/loading loop wavs in different folders
-        masterLoopsFolder = parentDir.getChildFile(MASTER_LOOP_FOLDER_NAME);
-        if (!masterLoopsFolder.exists())
-            masterLoopsFolder.createDirectory();
+        masterFolder = parentDir.getChildFile(MASTER_FOLDER_NAME);
+        if (!masterFolder.exists())
+            masterFolder.createDirectory();
 
-        defaultLoopFolder = masterLoopsFolder.getChildFile(TEMP_LOOP_FOLDER_NAME);
-        if (!defaultLoopFolder.exists())
-            defaultLoopFolder.createDirectory();
+        tempLoopFolder = masterFolder.getChildFile(TEMP_LOOP_FOLDER_NAME);
+        if (!tempLoopFolder.exists())
+            tempLoopFolder.createDirectory();
 
-        //initially we are working in the default dir
-        currentLoopFolder = defaultLoopFolder;
+        savedLoopsFolder = masterFolder.getChildFile(SAVED_LOOPS_FOLDER_NAME);
+        if (!savedLoopsFolder.exists())
+            savedLoopsFolder.createDirectory();
 
         
 
@@ -56,11 +57,11 @@ public:
     }
 
     //DN: We check if this track wav file exists in the current loop dir and make it if it doesn't
-    juce::File getOrCreateWAVInCurrentLoopDir(juce::String wavFilename)
+    juce::File getOrCreateWAVInTempLoopDir(juce::String wavFilename)
     {
-        auto wavFile = currentLoopFolder.getChildFile(wavFilename);
+        auto wavFile = tempLoopFolder.getChildFile(wavFilename);
         if (!wavFile.existsAsFile())
-            wavFile = currentLoopFolder.getNonexistentChildFile(wavFilename, ".wav");
+            wavFile = tempLoopFolder.getNonexistentChildFile(wavFilename, ".wav");
 
         return wavFile;
     }
@@ -69,43 +70,63 @@ public:
     {
         juce::StringArray loopFolderNamesArray;
 
-        //const juce::File dirToSearch = masterLoopsFolder;
-        //for (juce::DirectoryEntry entry : juce::RangedDirectoryIterator(dirToSearch, false,"*",0))
-        //{
-        //    auto file = entry.getFile();
-        //    auto string = file.getFileName();
-        //    loopFolderArray.add(string);
-        //}
-
-        juce::Array<juce::File> childDirs = masterLoopsFolder.findChildFiles(1, false);
+        juce::Array<juce::File> childDirs = savedLoopsFolder.findChildFiles(1, false);
         for (juce::File file : childDirs)
             loopFolderNamesArray.add(file.getFileName());
 
         return loopFolderNamesArray;
     }
 
-
-    //DN: this method sets the folder we will be recording our audio file to
-//  if it doesn't exist it will be created
-    void createAndSetCurrentLoopFolder(juce::String folderName)
+    //DN:  retrives saved audio files from given folder name, copies them to temp loop folder 
+    //  so they can be loaded into the project, then potentially recorded over
+    // without affecting the original saved audio
+    //call this when loading a previously saved project
+    //returns true if successful, false otherwise
+    bool loadWAVsFrom(juce::String folderName)
     {
-        currentLoopFolder = masterLoopsFolder.getChildFile(folderName);
-        if (!currentLoopFolder.exists())
-            currentLoopFolder.createDirectory();
-        else
+        auto folderToCopyFrom = savedLoopsFolder.getChildFile(folderName);
+        if (!folderToCopyFrom.exists())
+            return false;
+
+        juce::Array<juce::File> childWAVs = folderToCopyFrom.findChildFiles(2, false);
+        for (juce::File fileToCopy : childWAVs)
         {
-            //DN:  need to add some kind of warning here that that loop exists already
-            //maybe make return type a bool
+            //DN: the track WAV filenames will be the same for all sets of loops.  Folder names differentiate the loops
+            juce::File destinationFile = tempLoopFolder.getChildFile(fileToCopy.getFileName());
+            if (!fileToCopy.copyFileTo(destinationFile))
+                return false;
         }
 
+        return true;
+            
     }
 
 
 
+    bool saveWAVsTo(juce::String folderName)
+    {
+        auto folderToCopyTo = savedLoopsFolder.getChildFile(folderName);
+        if (!folderToCopyTo.exists())
+            return false;
+
+        juce::Array<juce::File> childWAVs = folderToCopyTo.findChildFiles(2, false);
+        for (juce::File fileToReplace : childWAVs)
+        {
+            //DN: the track WAV filenames will be the same for all sets of loops.  Folder names differentiate the loops
+            juce::File sourceFile = tempLoopFolder.getChildFile(fileToReplace.getFileName());
+            if (!sourceFile.copyFileTo(fileToReplace))
+                return false;
+        }
+
+        return true;
+
+    }
+
+
 private:
-    juce::File masterLoopsFolder;
-    juce::File currentLoopFolder;
-    juce::File defaultLoopFolder;
+    juce::File masterFolder;
+    juce::File tempLoopFolder;
+    juce::File savedLoopsFolder;
 };
 
 

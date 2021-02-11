@@ -43,6 +43,9 @@ private:
     // AF: Functions that deal with the buttons being clicked
     void playButtonClicked();
     void stopButtonClicked();
+    void saveButtonClicked();
+    void initializeButtonClicked();
+    void savedLoopSelected();
 
     //==============================================================================
     // AF: Method that returns true if any tracks are currently playing
@@ -57,15 +60,20 @@ private:
     // Global controls
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
-    juce::Label savedLoopsLabel{ "savedLoopLabel","Saved Loops" };
+    juce::Label savedLoopsLabel{ "savedLoopLabel","Project Currently Loaded" };
     juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
     DirectoryTree savedLoopDirTree;
     juce::StringArray savedLoopFolderNames;
+    juce::TextButton saveButton{ "Save Project" };
+    juce::AlertWindow saveProjectWindow{"Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon};
+    juce::TextButton initializeButton{ "New Project" };
+    juce::AlertWindow initializeProjectWarning{ "Start Over","If you have not given this project a name, it will be lost.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
 
-    AudioTrack track1{ "Loopstation Track1.wav" };
-    AudioTrack track2{ "Loopstation Track2.wav" };
-    AudioTrack track3{ "Loopstation Track3.wav" };
-    AudioTrack track4{ "Loopstation Track4.wav" };
+
+    AudioTrack track1;
+    AudioTrack track2;
+    AudioTrack track3;
+    AudioTrack track4;
 
     juce::MixerAudioSource mixer;
 

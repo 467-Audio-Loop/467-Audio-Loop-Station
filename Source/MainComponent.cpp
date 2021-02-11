@@ -51,20 +51,45 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     //DN:  add saved loops label and dropdown menu
     addAndMakeVisible(&savedLoopsLabel);
     addAndMakeVisible(&savedLoopsDropdown);
+    addAndMakeVisible(&saveButton);
+    addAndMakeVisible(&initializeButton);
+
+    saveButton.onClick = [this] { saveButtonClicked(); };
+   // saveButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    saveButton.setEnabled(true);
+
+    //sets up the alert window for when you hit Save
+    saveProjectWindow.addTextEditor("newProjectName", "");
+    saveProjectWindow.addButton("Cancel", 0);
+    saveProjectWindow.addButton("Save", 1);
+
+    initializeButton.onClick = [this] { initializeButtonClicked(); };
+    // initializeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    initializeButton.setEnabled(true);
+
+    //sets up the alert window for when you clear the project back to default
+    initializeProjectWarning.addButton("Nevermind", 0);
+    initializeProjectWarning.addButton("OK", 1);
 
     //DN: Set up default directory loop wav files and feed them to Audio track objects
-    auto track1File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK1_FILENAME);
-    auto track2File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK2_FILENAME);
-    auto track3File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK3_FILENAME);
-    auto track4File = savedLoopDirTree.getOrCreateWAVInCurrentLoopDir(TRACK4_FILENAME);
+
+    auto track1File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK1_FILENAME);
+    auto track2File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK2_FILENAME);
+    auto track3File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK3_FILENAME);
+    auto track4File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK4_FILENAME);
     track1.setLastRecording(track1File);
     track2.setLastRecording(track2File);
     track3.setLastRecording(track3File);
     track4.setLastRecording(track4File);
 
+    //DN:  set up the dropdown that lets you load previously saved projects
     savedLoopFolderNames = savedLoopDirTree.getLoopFolderNamesArray();
     savedLoopsDropdown.addItemList(savedLoopFolderNames,1);
-    savedLoopsDropdown.setSelectedId(1, juce::dontSendNotification);
+    savedLoopsDropdown.setTextWhenNothingSelected("No Project Loaded");
+    savedLoopsDropdown.setTextWhenNoChoicesAvailable("No Projects Found");
+    savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
+
+
 
     track1.addChangeListener(this);
     track2.addChangeListener(this);
@@ -489,17 +514,30 @@ void MainComponent::resized()
     // This is called when the MainContentComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
-    auto rect = getLocalBounds();
+    auto rect = getLocalBounds().reduced(10);
     auto globalControlsArea = rect.removeFromTop(400);
 
     audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
-    auto transportControlsArea = globalControlsArea.removeFromTop(40);
-    stopButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
-    playButton.setBounds(transportControlsArea.removeFromLeft(140).reduced(8));
-    auto savedLoopsArea = globalControlsArea.removeFromTop(100);
+
+    auto transportControlsArea = globalControlsArea.removeFromTop(80);
+    transportControlsArea.reduce(50, 0);
+    stopButton.setBounds(transportControlsArea.removeFromLeft(transportControlsArea.proportionOfWidth(0.5f)).reduced(10));
+    playButton.setBounds(transportControlsArea.reduced(10));
+
+    auto gapBetweenStuff = globalControlsArea.removeFromTop(50);
+
+    auto savedLoopsArea = globalControlsArea.removeFromTop(150);
     savedLoopsLabel.setBounds(savedLoopsArea.removeFromTop(50));
     savedLoopsLabel.setJustificationType(juce::Justification::centredBottom);
-    savedLoopsDropdown.setBounds(savedLoopsArea.removeFromTop(50));
+    savedLoopsDropdown.setBounds(savedLoopsArea.removeFromTop(50).reduced(5));
+    auto saveClearButtonsArea = (savedLoopsArea.removeFromTop(50));
+    saveButton.setBounds(saveClearButtonsArea.removeFromLeft(proportionOfWidth(0.25f)).reduced(10));
+    initializeButton.setBounds(saveClearButtonsArea.reduced(10));
+
+
+
+
+    
 
     
     auto track1Area = rect.removeFromTop(80);
@@ -592,6 +630,30 @@ void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
     inputAudio.setGain(1.0);
+}
+
+void MainComponent::saveButtonClicked()
+{
+
+    saveProjectWindow.runModalLoop();
+}
+
+void MainComponent::initializeButtonClicked()
+{
+    initializeProjectWarning.runModalLoop();
+}
+
+void MainComponent::savedLoopSelected()
+{
+
+    //create a warning here and reset the dropdown and abort this function if they hit Nevermind
+
+
+    //if they hit ok, then go ahead and load
+    juce::String savedLoopFolderName = savedLoopsDropdown.getText();
+
+    bool test = savedLoopDirTree.loadWAVsFrom(savedLoopFolderName);
+
 }
 
 bool MainComponent::trackCurrentlyPlaying()

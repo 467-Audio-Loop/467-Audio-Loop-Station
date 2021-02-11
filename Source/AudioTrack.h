@@ -155,7 +155,7 @@ class AudioTrack : public juce::AudioAppComponent,
     private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback
 {
 public:
-    AudioTrack(juce::String wavFilename)
+    AudioTrack()
     {
         formatManager.registerBasicFormats();
         thumbnail.addChangeListener(this);
@@ -365,6 +365,8 @@ public:
         return loopSource.getPosition();
     }
 
+
+    //make sure to set this up before calling startRecording()
     void setLastRecording(juce::File file)
     {
         lastRecording = file;
@@ -430,7 +432,7 @@ public:
     }
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     {
-
+        
     }
     void releaseResources()
     {
@@ -444,7 +446,7 @@ public:
 
         int maxOutChannels = bufferToFill.buffer->getNumChannels();
 
-        if (loopBufferSize > 0)
+        if (loopBufferSize > 0 && maxInChannels > 0)
         {
             for (int i = 0; i < maxOutChannels; ++i)
             {
@@ -452,7 +454,7 @@ public:
 
                 for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
                 {
-                    writer[sample] = inputBuffer->getSample(i % maxInChannels, juce::jmin(sample, inputBuffer->getNumSamples())) * gain;
+                    writer[sample] = inputBuffer->getSample(i % maxInChannels, juce::jmin(sample, loopBufferSize)) * gain;
                 }
             }
         }
