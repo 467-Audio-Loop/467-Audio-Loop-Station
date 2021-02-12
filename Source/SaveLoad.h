@@ -56,10 +56,23 @@ public:
 
     }
 
-    //DN: We check if this track wav file exists in the current loop dir and make it if it doesn't
+    //DN: We delete the file if in exists in temp loop dir and return
+    //a blank file object to be used for a fresh project
+    juce::File setFreshWAVInTempLoopDir(juce::String wavFilename)
+    {
+        auto wavFile = tempLoopFolder.getChildFile(wavFilename + ".wav");
+        if (wavFile.existsAsFile())
+            wavFile.deleteFile();
+        wavFile = tempLoopFolder.getNonexistentChildFile(wavFilename, ".wav");
+
+        return wavFile;
+    }
+
+    //DN: We return the file object for the filename in temp loop dir
+    //if it exists, the audio on the file will be used
     juce::File getOrCreateWAVInTempLoopDir(juce::String wavFilename)
     {
-        auto wavFile = tempLoopFolder.getChildFile(wavFilename);
+        auto wavFile = tempLoopFolder.getChildFile(wavFilename + ".wav");
         if (!wavFile.existsAsFile())
             wavFile = tempLoopFolder.getNonexistentChildFile(wavFilename, ".wav");
 

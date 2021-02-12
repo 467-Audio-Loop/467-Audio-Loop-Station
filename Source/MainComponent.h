@@ -48,6 +48,7 @@ private:
     void savedLoopSelected();
 
     // Loading/Saving Audio to from tracks
+    void initializeTempWAVs();
     void refreshAudioReferences();
     void redrawAndBufferAudio();
 
@@ -71,6 +72,7 @@ private:
     juce::TextButton initializeButton{ "New Project" };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
+    int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
 
     AudioTrack track1;
     AudioTrack track2;

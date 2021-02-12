@@ -65,7 +65,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
 
     //DN: Set up default directory loop wav files and feed them to Audio track objects
-    refreshAudioReferences();
+    initializeTempWAVs();
 
     //DN:  set up the dropdown that lets you load previously saved projects
     //DN: set first item index offset to 1, 0 will be when no project is selected
@@ -575,8 +575,6 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
             track2.setDisplayFullThumbnail(true);
             track3.setDisplayFullThumbnail(true);
             track4.setDisplayFullThumbnail(true);
-
-            inputAudio.setGain(0.0);
         }
     }
     if (source == &track1)
@@ -656,7 +654,8 @@ void MainComponent::saveButtonClicked()
     }
     else
     {
-        savedLoopDirTree.saveWAVsTo(savedLoopsDropdown.getText());  //DN: save loop to project folder selected in dropdown
+        newFolderName = savedLoopsDropdown.getText();
+        savedLoopDirTree.saveWAVsTo(newFolderName);  //DN: save loop to project folder selected in dropdown
     }
 
     //DN: now we refresh the dropdown list with the current folders
@@ -667,7 +666,11 @@ void MainComponent::saveButtonClicked()
     for (int i = 0; i < folderNames.size(); ++i)
     {
         if (folderNames[i] == newFolderName)
-            savedLoopsDropdown.setSelectedId(i + 1,juce::dontSendNotification); //account for dropdown index offset, don't trigger savedLoopSelected
+        {
+            savedLoopsDropdown.setSelectedId(i + 1, juce::dontSendNotification); //account for dropdown index offset, don't trigger savedLoopSelected
+            currentProjectListID = i+1;
+        }
+            
     }
     unsavedChanges = false;
 
@@ -675,7 +678,23 @@ void MainComponent::saveButtonClicked()
 
 void MainComponent::initializeButtonClicked()
 {
-    auto result = unsavedProgressWarning.runModalLoop();
+    //creates a warning here that will abort this function if they hit Cancel
+    if (unsavedChanges)
+    {
+        auto okCancelSelection = unsavedProgressWarning.showOkCancelBox(juce::AlertWindow::AlertIconType::WarningIcon, "Unsaved Progress Warning",
+            "You will lose any unsaved progress.  Continue?",
+            "Ok", "Cancel", nullptr);
+        if (okCancelSelection == 0)
+        {
+            return;
+        }
+    }
+
+    savedLoopsDropdown.setSelectedId(0,juce::dontSendNotification);
+    currentProjectListID = 0;
+    initializeTempWAVs();
+    redrawAndBufferAudio();
+    unsavedChanges = false;
 }
 
 void MainComponent::savedLoopSelected()
@@ -689,7 +708,7 @@ void MainComponent::savedLoopSelected()
             "Ok", "Cancel", nullptr);
         if (okCancelSelection == 0)
         {
-            savedLoopsDropdown.setSelectedId(0);
+            savedLoopsDropdown.setSelectedId(currentProjectListID,juce::dontSendNotification);
             return;
         }
     }
@@ -707,8 +726,21 @@ void MainComponent::savedLoopSelected()
         redrawAndBufferAudio();
     }
 
+    currentProjectListID = savedLoopsDropdown.getSelectedId();
     unsavedChanges = false;
 
+}
+
+void MainComponent::initializeTempWAVs()
+{
+    auto track1File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK1_FILENAME);
+    auto track2File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK2_FILENAME);
+    auto track3File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK3_FILENAME);
+    auto track4File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK4_FILENAME);
+    track1.setLastRecording(track1File);
+    track2.setLastRecording(track2File);
+    track3.setLastRecording(track3File);
+    track4.setLastRecording(track4File);
 }
 
 void MainComponent::refreshAudioReferences()

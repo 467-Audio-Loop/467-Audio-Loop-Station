@@ -90,7 +90,13 @@ public:
     //DN:  this method will read the audio from a file and draw the thumbnail
     void setThumbnailSource(const juce::File& file)
     {
-        thumbnail.setSource(new juce::FileInputSource(file)); 
+        //DN:  need this here because when switching projects 
+        //the thumbnail was  not updating any tracks that were not being replaced (i.e. for the project being 
+        // loaded those tracks are empty)  and showing stale waveforms
+        if(!file.exists())
+            thumbnail.setSource(nullptr);
+        else
+            thumbnail.setSource(new juce::FileInputSource(file)); 
     }
 
     bool isRecording() const
@@ -352,6 +358,7 @@ public:
     {
         auto file = lastRecording;
         auto reader = formatManager.createReaderFor(file);
+
         if (reader != nullptr)
         {
             //DN: set up a memory buffer to hold the audio for this loop file
@@ -362,10 +369,16 @@ public:
             delete reader;
             // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
             loopSource.setBuffer(loopBuffer.release());
-
         }
-        recorder.setThumbnailSource(lastRecording);
+        else
+        {
+            //if the lastRecording object doesn't exist, we want to reset the loopSource to be blank
+            auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(2, 0);
+            // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
+            loopSource.setBuffer(loopBuffer.release());
+        }
 
+        recorder.setThumbnailSource(lastRecording);
         repaint();
 
     }
