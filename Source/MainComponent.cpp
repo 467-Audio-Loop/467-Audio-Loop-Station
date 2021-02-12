@@ -57,34 +57,19 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     saveButton.onClick = [this] { saveButtonClicked(); };
    // saveButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     saveButton.setEnabled(true);
-
-    //sets up the alert window for when you hit Save
-    saveProjectWindow.addTextEditor("newProjectName", "");
-    saveProjectWindow.addButton("Cancel", 0);
-    saveProjectWindow.addButton("Save", 1);
+    
 
     initializeButton.onClick = [this] { initializeButtonClicked(); };
     // initializeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     initializeButton.setEnabled(true);
 
-    //sets up the alert window for when you clear the project back to default
-    initializeProjectWarning.addButton("Nevermind", 0);
-    initializeProjectWarning.addButton("OK", 1);
 
     //DN: Set up default directory loop wav files and feed them to Audio track objects
-
-    auto track1File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK1_FILENAME);
-    auto track2File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK2_FILENAME);
-    auto track3File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK3_FILENAME);
-    auto track4File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK4_FILENAME);
-    track1.setLastRecording(track1File);
-    track2.setLastRecording(track2File);
-    track3.setLastRecording(track3File);
-    track4.setLastRecording(track4File);
+    refreshAudioReferences();
 
     //DN:  set up the dropdown that lets you load previously saved projects
-    savedLoopFolderNames = savedLoopDirTree.getLoopFolderNamesArray();
-    savedLoopsDropdown.addItemList(savedLoopFolderNames,1);
+    //DN: set first item index offset to 1, 0 will be when no project is selected
+    savedLoopsDropdown.addItemList(savedLoopDirTree.getLoopFolderNamesArray(),1); 
     savedLoopsDropdown.setTextWhenNothingSelected("No Project Loaded");
     savedLoopsDropdown.setTextWhenNoChoicesAvailable("No Projects Found");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
@@ -179,6 +164,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             track4RecordButton.setEnabled(false);
 
             track1.startRecording();
+
+            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
         }
     };
 
@@ -246,6 +233,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             track4RecordButton.setEnabled(false);
 
             track2.startRecording();
+
+            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
         }
     };
 
@@ -313,6 +302,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             track4RecordButton.setEnabled(false);
 
             track3.startRecording();
+
+            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
         }
     };
 
@@ -378,6 +369,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             track3RecordButton.setEnabled(false);
 
             track4.startRecording();
+
+            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
         }
     };
 
@@ -634,25 +627,109 @@ void MainComponent::stopButtonClicked()
 
 void MainComponent::saveButtonClicked()
 {
+    juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
 
-    saveProjectWindow.runModalLoop();
+    //sets up the alert window for when you hit Save
+    saveProjectDialog.addTextEditor("newProjectName", "");
+    saveProjectDialog.addButton("Cancel", 0);
+    saveProjectDialog.addButton("Save", 1);
+    
+    juce::String newFolderName;
+
+    //DN: if this project is new, we need to name it/create a folder for it
+    if (savedLoopsDropdown.getSelectedId() == 0)
+    {
+        auto result = saveProjectDialog.runModalLoop();
+        newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
+        if (newFolderName.length() == 0)
+            saveProjectDialog.addTextBlock("New Project Name Cannot Be Empty");
+        while (newFolderName.length() == 0)
+        {
+            result = saveProjectDialog.runModalLoop();
+            newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
+        }
+        saveProjectDialog.setVisible(false);
+
+        savedLoopDirTree.saveWAVsTo(newFolderName);
+
+
+    }
+    else
+    {
+        savedLoopDirTree.saveWAVsTo(savedLoopsDropdown.getText());  //DN: save loop to project folder selected in dropdown
+    }
+
+    //DN: now we refresh the dropdown list with the current folders
+    //and find the folder we just saved To, then make it the current selection
+    juce::StringArray folderNames = savedLoopDirTree.getLoopFolderNamesArray();
+    savedLoopsDropdown.clear();
+    savedLoopsDropdown.addItemList(folderNames,1); //DN: set first item index offset to 1, 0 will be when no project is selected
+    for (int i = 0; i < folderNames.size(); ++i)
+    {
+        if (folderNames[i] == newFolderName)
+            savedLoopsDropdown.setSelectedId(i + 1,juce::dontSendNotification); //account for dropdown index offset, don't trigger savedLoopSelected
+    }
+    unsavedChanges = false;
+
 }
 
 void MainComponent::initializeButtonClicked()
 {
-    initializeProjectWarning.runModalLoop();
+    auto result = unsavedProgressWarning.runModalLoop();
 }
 
 void MainComponent::savedLoopSelected()
 {
 
-    //create a warning here and reset the dropdown and abort this function if they hit Nevermind
+    //creates a warning here that will reset the dropdown and abort this function if they hit Cancel
+    if (savedLoopsDropdown.getSelectedId() != 0 && unsavedChanges)
+    {
+        auto okCancelSelection = unsavedProgressWarning.showOkCancelBox(juce::AlertWindow::AlertIconType::WarningIcon,"Unsaved Progress Warning",
+            "You will lose any unsaved progress.  Continue?",
+            "Ok", "Cancel", nullptr);
+        if (okCancelSelection == 0)
+        {
+            savedLoopsDropdown.setSelectedId(0);
+            return;
+        }
+    }
+    
 
-
-    //if they hit ok, then go ahead and load
+    //if they hit ok, then go ahead and load the selection
     juce::String savedLoopFolderName = savedLoopsDropdown.getText();
 
     bool test = savedLoopDirTree.loadWAVsFrom(savedLoopFolderName);
+
+    //DN: only try to read files if copying them was successfull
+    if (test)
+    {
+        refreshAudioReferences();
+        redrawAndBufferAudio();
+    }
+
+    unsavedChanges = false;
+
+}
+
+void MainComponent::refreshAudioReferences()
+{
+    auto track1File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK1_FILENAME);
+    auto track2File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK2_FILENAME);
+    auto track3File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK3_FILENAME);
+    auto track4File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK4_FILENAME);
+    track1.setLastRecording(track1File);
+    track2.setLastRecording(track2File);
+    track3.setLastRecording(track3File);
+    track4.setLastRecording(track4File);
+}
+
+//DN:  call after refreshAudioReferences to load the audio into memory and redraw waveforms
+void MainComponent::redrawAndBufferAudio()
+{
+    track1.redrawAndBufferAudio();
+    track2.redrawAndBufferAudio();
+    track3.redrawAndBufferAudio();
+    track4.redrawAndBufferAudio();
 
 }
 
@@ -688,6 +765,8 @@ void MainComponent::changeState(TransportState newState)
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
             savedLoopsDropdown.setEnabled(true);
+            saveButton.setEnabled(true);
+            initializeButton.setEnabled(true);
             track1.setPosition(0);
             track2.setPosition(0);
             track3.setPosition(0);
@@ -697,6 +776,8 @@ void MainComponent::changeState(TransportState newState)
         case Starting: 
             playButton.setEnabled(false);
             savedLoopsDropdown.setEnabled(false);
+            saveButton.setEnabled(false);
+            initializeButton.setEnabled(false);
             track1.start();
             track2.start();
             track3.start();

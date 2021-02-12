@@ -16,10 +16,10 @@
 #define MASTER_FOLDER_NAME "467Audio"
 #define SAVED_LOOPS_FOLDER_NAME "Saved Loops"
 #define TEMP_LOOP_FOLDER_NAME "Temp WAVs"
-#define TRACK1_FILENAME "Loopstation Track 1.wav"
-#define TRACK2_FILENAME "Loopstation Track 2.wav"
-#define TRACK3_FILENAME "Loopstation Track 3.wav"
-#define TRACK4_FILENAME "Loopstation Track 4.wav"
+#define TRACK1_FILENAME "Loopstation Track1"
+#define TRACK2_FILENAME "Loopstation Track2"
+#define TRACK3_FILENAME "Loopstation Track3"
+#define TRACK4_FILENAME "Loopstation Track4"
 
 
 class DirectoryTree
@@ -88,6 +88,11 @@ public:
         if (!folderToCopyFrom.exists())
             return false;
 
+        //DN: delete old WAVs to be overwritten
+        juce::Array<juce::File> wavsToDelete = tempLoopFolder.findChildFiles(2, false);
+        for (juce::File fileToDelete : wavsToDelete)
+            fileToDelete.deleteFile();
+
         juce::Array<juce::File> childWAVs = folderToCopyFrom.findChildFiles(2, false);
         for (juce::File fileToCopy : childWAVs)
         {
@@ -102,19 +107,30 @@ public:
     }
 
 
-
+    //DN: copies current WAVs from temp folder to designated folder in Saved Loops directory.
+    //  if the folder name doesn't exist it will be created
+    //if WAVs exist in the folder already they will be overwritten
     bool saveWAVsTo(juce::String folderName)
     {
         auto folderToCopyTo = savedLoopsFolder.getChildFile(folderName);
         if (!folderToCopyTo.exists())
-            return false;
-
-        juce::Array<juce::File> childWAVs = folderToCopyTo.findChildFiles(2, false);
-        for (juce::File fileToReplace : childWAVs)
         {
-            //DN: the track WAV filenames will be the same for all sets of loops.  Folder names differentiate the loops
-            juce::File sourceFile = tempLoopFolder.getChildFile(fileToReplace.getFileName());
-            if (!sourceFile.copyFileTo(fileToReplace))
+            folderToCopyTo.createDirectory();
+
+        }
+ 
+        //DN: delete old WAVs to be overwritten
+        juce::Array<juce::File> wavsToDelete = folderToCopyTo.findChildFiles(2, false);
+        for (juce::File fileToDelete : wavsToDelete)
+            fileToDelete.deleteFile();
+
+        //DN: get WAVs to copy
+        juce::Array<juce::File> wavsToCopy = tempLoopFolder.findChildFiles(2, false);
+
+        for (juce::File fileToCopy : wavsToCopy)
+        {
+            juce::File destFile = folderToCopyTo.getChildFile(fileToCopy.getFileName());
+            if (!fileToCopy.copyFileTo(destFile))
                 return false;
         }
 

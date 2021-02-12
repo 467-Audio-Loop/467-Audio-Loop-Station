@@ -161,33 +161,6 @@ public:
         thumbnail.addChangeListener(this);
         loopSource.addChangeListener(this);
         deviceManager.addAudioCallback(&recorder);
-
-
-
-        //DN:  let's not load in the previous files for playback automaticaly, instead we'll ask if they want to save
-        //on quit, so this constructor will just always set us up to create a new blank loop in the default/temp folder
-
-        //else
-        //{
-        //    //DN:  similar code to stopRecording - we want to load in files from the previous session if they exist
-        //    auto file = lastRecording;
-        //    auto reader = formatManager.createReaderFor(file);
-        //    if (reader != nullptr)
-        //    {
-        //        //DN: set up a memory buffer to hold the audio for this loop file
-        //        auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
-        //        //DN: read the audio file into the loopBuffer
-        //        reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
-        //        //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
-        //        delete reader;
-        //        // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
-        //        loopSource.setBuffer(loopBuffer.release());
-
-        //        recorder.setThumbnailSource(lastRecording);
-        //    }
-            
-          //  repaint();
-       //}
     }
 
     ~AudioTrack() override
@@ -370,6 +343,29 @@ public:
     void setLastRecording(juce::File file)
     {
         lastRecording = file;
+    }
+
+    //similar to stopRecording, call this after setAsLastRecording to load audio from disk into memory and redraw thumbnail
+    void redrawAndBufferAudio()
+    {
+        auto file = lastRecording;
+        auto reader = formatManager.createReaderFor(file);
+        if (reader != nullptr)
+        {
+            //DN: set up a memory buffer to hold the audio for this loop file
+            auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
+            //DN: read the audio file into the loopBuffer
+            reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
+            //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
+            delete reader;
+            // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
+            loopSource.setBuffer(loopBuffer.release());
+
+        }
+        recorder.setThumbnailSource(lastRecording);
+
+        repaint();
+
     }
 
 

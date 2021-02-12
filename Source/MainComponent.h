@@ -47,6 +47,10 @@ private:
     void initializeButtonClicked();
     void savedLoopSelected();
 
+    // Loading/Saving Audio to from tracks
+    void refreshAudioReferences();
+    void redrawAndBufferAudio();
+
     //==============================================================================
     // AF: Method that returns true if any tracks are currently playing
     bool trackCurrentlyPlaying();
@@ -60,15 +64,13 @@ private:
     // Global controls
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
-    juce::Label savedLoopsLabel{ "savedLoopLabel","Project Currently Loaded" };
+    juce::Label savedLoopsLabel{ "savedLoopLabel","Current Project File" };
     juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
     DirectoryTree savedLoopDirTree;
-    juce::StringArray savedLoopFolderNames;
     juce::TextButton saveButton{ "Save Project" };
-    juce::AlertWindow saveProjectWindow{"Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon};
     juce::TextButton initializeButton{ "New Project" };
-    juce::AlertWindow initializeProjectWarning{ "Start Over","If you have not given this project a name, it will be lost.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
-
+    juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
+    bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
 
     AudioTrack track1;
     AudioTrack track2;
