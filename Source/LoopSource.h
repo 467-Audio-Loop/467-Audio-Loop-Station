@@ -174,11 +174,11 @@ public:
                     if (pos == masterLoopLength)
                     {
                         pos = 0;
-                        beginningOfFile = true;
-                    }
-                    else
-                    {
-                        beginningOfFile = false;
+
+                        // AF: Update position only at last iteration of the outer loop
+                        // to prevent channels for being out of sync
+                        if (i == maxOutChannels - 1)
+                            position = 0;
                     }
 
                     //DN:  we only want to read the fileBuffer to output if it's not currently being recorded over,
@@ -190,6 +190,12 @@ public:
                     pos++;
                 }
             }
+
+            // Check for beginning of file
+            if (position == 0)
+                beginningOfFile = true;
+            else
+                beginningOfFile = false;
 
             position = pos;
 
@@ -221,6 +227,11 @@ public:
         return false;
     }
 
+    void setBeginningOfFile(bool boolean)
+    {
+        beginningOfFile = boolean;
+    }
+
     void setFileStartOffset(int newStartOffset)
     {
         fileStartOffset = newStartOffset;
@@ -236,7 +247,7 @@ private:
     double sampleRate = 44100.0;
 
     // AF: Flag to set when it's ready to record
-    bool beginningOfFile = false;
+    bool beginningOfFile = true;
 
     juce::CriticalSection callbackLock;
 

@@ -290,6 +290,8 @@ public:
             continue;
         }
 
+        loopSource.setBeginningOfFile(false);
+
         //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
         loopSource.startRecording(); 
        
