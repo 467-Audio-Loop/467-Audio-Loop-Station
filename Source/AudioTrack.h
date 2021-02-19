@@ -435,12 +435,14 @@ public:
     juce::TextButton reverseButton{ "Reverse" };
     juce::Slider slipController;
 
+    juce::TextButton recordButton{ "Record" };
+
 private:
     juce::AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{ 10 };
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
 
-    int samplesPerBlock;
+    int samplesPerBlock = 44100;
     bool aboutToOverflow = false;
 
     AudioRecorder recorder{ thumbnail };

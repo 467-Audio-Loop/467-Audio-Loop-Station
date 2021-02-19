@@ -19,61 +19,109 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     // AF: Initialize state enum
     state = Stopped;
 
-    // AF: Show sliders
-    addAndMakeVisible(track1.panSlider);
-    track1.panSlider.setNumDecimalPlacesToDisplay(2);
-    track1.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track1.panLabel);
-
-    addAndMakeVisible(track2.panSlider);
-    track2.panSlider.setNumDecimalPlacesToDisplay(2);
-    track2.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track2.panLabel);
-
-    addAndMakeVisible(track3.panSlider);
-    track3.panSlider.setNumDecimalPlacesToDisplay(2);
-    track3.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track3.panLabel);
-
-    addAndMakeVisible(track4.panSlider);
-    track4.panSlider.setNumDecimalPlacesToDisplay(2);
-    track4.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track4.panLabel);
-
-    // DN: Show reverse buttons and slip controllers
-    addAndMakeVisible(track1.slipController);
-    track1.slipController.setNumDecimalPlacesToDisplay(2);
-    track1.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(track1.reverseButton);
-    addAndMakeVisible(track2.slipController);
-    track2.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(track2.reverseButton);
-    addAndMakeVisible(track3.slipController);
-    track3.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(track3.reverseButton);
-    addAndMakeVisible(track4.slipController);
-    track4.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(track4.reverseButton);
+    //DN: create tracks 
+    for (int i = 0; i < NUM_TRACKS; ++i)
+    {
+        auto track = new AudioTrack;
+        tracksArray.add(track);
+    }
 
 
+    for (auto& track : tracksArray)
+    {
+        addAndMakeVisible(track->panSlider);
+        track->panSlider.setNumDecimalPlacesToDisplay(2);
+        track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
+        addAndMakeVisible(track->panLabel);
+
+        // DN: Show reverse buttons and slip controllers
+        addAndMakeVisible(track->reverseButton);
+        addAndMakeVisible(track->slipController);
+        track->slipController.setNumDecimalPlacesToDisplay(2);
+        track->slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+
+        // AF: Adds record button and paints it
+        addAndMakeVisible(track->recordButton);
+        track->recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+        track->recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
+        track->addChangeListener(this);
+
+        addAndMakeVisible(*track);
+        mixer.addInputSource(track, false);
+
+        deviceManager.addAudioCallback(track);
+
+        //callback lambda for each track's record button
+        track->recordButton.onClick = [this, &track]
+        {
 
 
-    // AF: Adds record button and paints it
-    addAndMakeVisible(track1RecordButton);
-    track1RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
-    track1RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+            if (track->isRecording())
+            {
+                track->stopRecording();
 
-    addAndMakeVisible(track2RecordButton);
-    track2RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
-    track2RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+                //inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
 
-    addAndMakeVisible(track3RecordButton);
-    track3RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
-    track3RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
-    addAndMakeVisible(track4RecordButton);
-    track4RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
-    track4RecordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+                track->recordButton.setButtonText("Record");
+
+                // AF: Enable other track "Record" buttons
+                for (auto& otherTrack : tracksArray)
+                {
+                    if (&otherTrack != &track)
+                        otherTrack->recordButton.setEnabled(true);
+                }               
+
+                track->setDisplayFullThumbnail(true);
+            }
+            else
+            {
+                // AF: Begin playback when user clicks record if it's not already playing
+                if (state == Stopped)
+                {
+                    changeState(Starting);
+                }
+
+                //inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
+
+                if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+                {
+                    SafePointer<MainComponent> safeThis(this);
+
+                    juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                        [safeThis, &track](bool granted) mutable
+                        {
+                            if (granted)
+                            {
+                                for (auto& i : safeThis->tracksArray)
+                                {
+                                    if (&i != &track)
+                                        i->startRecording();
+                                }
+                            }                               
+                        });
+                    return;
+                }
+
+                track->recordButton.setButtonText("Stop");
+
+                //AF: Make other record buttons greyed out
+                // AF: Enable other track "Record" buttons
+                for (auto& otherTrack : tracksArray)
+                {
+                    if (&otherTrack != &track)
+                        otherTrack->recordButton.setEnabled(false);
+                }
+
+                track->startRecording();
+
+                unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
+            }
+        };
+    }
+
+    mixer.addInputSource(&inputAudio, false);
 
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
@@ -115,305 +163,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
 
 
-    track1.addChangeListener(this);
-    track2.addChangeListener(this);
-    track3.addChangeListener(this);
-    track4.addChangeListener(this);
-
-    addAndMakeVisible(track1);
-    addAndMakeVisible(track2);
-    addAndMakeVisible(track3);
-    addAndMakeVisible(track4);
-
-    mixer.addInputSource(&inputAudio, false);
-    mixer.addInputSource(&track1, false);
-    mixer.addInputSource(&track2, false);
-    mixer.addInputSource(&track3, false);
-    mixer.addInputSource(&track4, false);
-
-
-
-    //We need to refactor a bit to DRY this section up
-    track1RecordButton.onClick = [this]
-    {
-        
-
-        if (track1.isRecording())
-        {
-            track1.stopRecording();
-
-            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
-
-            //DN: we'll always be playing if recording so we don't need this anymore
-            //    also calling start here will put things out of sync
-
-            //// AF: Only enable play button if no tracks are currently playing.
-            //if (state == Stopped)
-            //{
-            //    playButton.setEnabled(true);
-            //}
-            //else 
-            //{
-            //    track1.start(); 
-            //}
-
-            track1RecordButton.setButtonText("Record");
-
-            // AF: Enable other track "Record" buttons
-            track2RecordButton.setEnabled(true);
-            track3RecordButton.setEnabled(true);
-            track4RecordButton.setEnabled(true);
-
-            track1.setDisplayFullThumbnail(true);
-        }
-        else
-        {
-            // AF: Begin playback when user clicks record if it's not already playing
-            if (state == Stopped)
-            {
-                changeState(Starting);
-            }
-
-            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
-            // AF: Stop track from playing if this current track is actively playing,
-            // before starting to record again over it
-            //if (track1.isPlaying())
-            //    track1.stop();
-
-
-            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
-            {
-                SafePointer<MainComponent> safeThis(this);
-
-                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-                    [safeThis](bool granted) mutable
-                    {
-                        if (granted)
-                            safeThis->track1.startRecording();
-                    });
-                return;
-            }
-
-            track1RecordButton.setButtonText("Stop");
-
-            //AF: Make other record buttons greyed out
-            track2RecordButton.setEnabled(false);
-            track3RecordButton.setEnabled(false);
-            track4RecordButton.setEnabled(false);
-
-            track1.startRecording();
-
-            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
-        }
-    };
-
-    track2RecordButton.onClick = [this]
-    {
-        if (track2.isRecording())
-        {
-            track2.stopRecording();
-
-            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
-
-           
-            //// AF: Only enable play button if no tracks are currently playing.
-            //if (state == Stopped)
-            //{
-            //    playButton.setEnabled(true);
-            //}
-            //else // AF: If playback is happening, go ahead and start this track
-            //{
-            //    track2.start();
-            //}
-
-
-            track2RecordButton.setButtonText("Record");
-
-            // AF: Enable other track "Record" buttons
-            track1RecordButton.setEnabled(true);
-            track3RecordButton.setEnabled(true);
-            track4RecordButton.setEnabled(true);
-
-            track2.setDisplayFullThumbnail(true);
-        }
-        else
-        {
-            // AF: Begin playback when user clicks record if it's not already playing
-            if (state == Stopped)
-            {
-                changeState(Starting);
-            }
-
-            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
-            // AF: Stop track from playing if this current track is actively playing,
-            // before starting to record again over it
-            //if (track2.isPlaying())
-            //    track2.stop();
-
-            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
-            {
-                SafePointer<MainComponent> safeThis(this);
-
-                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-                    [safeThis](bool granted) mutable
-                    {
-                        if (granted)
-                            safeThis->track2.startRecording();
-                    });
-                return;
-            }
-            track2RecordButton.setButtonText("Stop");
-
-            //AF: Make other record buttons greyed out
-            track1RecordButton.setEnabled(false);
-            track3RecordButton.setEnabled(false);
-            track4RecordButton.setEnabled(false);
-
-            track2.startRecording();
-
-            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
-        }
-    };
-
-    track3RecordButton.onClick = [this]
-    {
-        if (track3.isRecording())
-        {
-            track3.stopRecording();
-
-            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
-
-
-            //// AF: Only enable play button if no tracks are currently playing.
-            //if (state == Stopped)
-            //{
-            //    playButton.setEnabled(true);
-            //}
-            //else // AF: If playback is happening, go ahead and start this track
-            //{
-            //    track3.start();
-            //}
-
-
-            track3RecordButton.setButtonText("Record");
-
-            // AF: Enable other track "Record" buttons
-            track1RecordButton.setEnabled(true);
-            track2RecordButton.setEnabled(true);
-            track4RecordButton.setEnabled(true);
-
-            track3.setDisplayFullThumbnail(true);
-        }
-        else
-        {
-            // AF: Begin playback when user clicks record if it's not already playing
-            if (state == Stopped)
-            {
-                changeState(Starting);
-            }
-
-            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
-            // AF: Stop track from playing if this current track is actively playing,
-            // before starting to record again over it
-            //if (track3.isPlaying())
-            //    track3.stop();
-
-            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
-            {
-                SafePointer<MainComponent> safeThis(this);
-
-                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-                    [safeThis](bool granted) mutable
-                    {
-                        if (granted)
-                            safeThis->track3.startRecording();
-                    });
-                return;
-            }
-            track3RecordButton.setButtonText("Stop");
-
-            //AF: Make other record buttons greyed out
-            track1RecordButton.setEnabled(false);
-            track2RecordButton.setEnabled(false);
-            track4RecordButton.setEnabled(false);
-
-            track3.startRecording();
-
-            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
-        }
-    };
-
-    track4RecordButton.onClick = [this]
-    {
-        if (track4.isRecording())
-        {
-            track4.stopRecording();
-
-            inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
-
-            //// AF: Only enable play button if no tracks are currently playing.
-            //if (state == Stopped)
-            //{
-            //    playButton.setEnabled(true);
-            //}
-            //else // AF: If playback is happening, go ahead and start this track
-            //{
-            //    track4.start();
-            //}
-
-            track4RecordButton.setButtonText("Record");
-
-            // AF: Enable other track "Record" buttons
-            track1RecordButton.setEnabled(true);
-            track2RecordButton.setEnabled(true);
-            track3RecordButton.setEnabled(true);
-
-            track4.setDisplayFullThumbnail(true);
-        }
-        else
-        {
-            // AF: Begin playback when user clicks record if it's not already playing
-            if (state == Stopped)
-            {
-                changeState(Starting);
-            }
-
-            inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
-            // AF: Stop track from playing if this current track is actively playing,
-            // before starting to record again over it
-            //if (track4.isPlaying())
-             //   track4.stop();
-
-            if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
-            {
-                SafePointer<MainComponent> safeThis(this);
-
-                juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-                    [safeThis](bool granted) mutable
-                    {
-                        if (granted)
-                            safeThis->track4.startRecording();
-                    });
-                return;
-            }
-            track4RecordButton.setButtonText("Stop");
-
-            //AF: Make other record buttons greyed out
-            track1RecordButton.setEnabled(false);
-            track2RecordButton.setEnabled(false);
-            track3RecordButton.setEnabled(false);
-
-            track4.startRecording();
-
-            unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
-        }
-    };
-
-
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
         && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
@@ -427,15 +176,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         setAudioChannels (2, 2);
     }
 
-    
-    deviceManager.addAudioCallback(&track1);
-    deviceManager.addAudioCallback(&track2);
-    deviceManager.addAudioCallback(&track3);
-    deviceManager.addAudioCallback(&track4);
-
-
+   
     deviceManager.addChangeListener(this);  
-
 
 
     // Make sure you set the size of the component after
@@ -525,10 +267,6 @@ void MainComponent::releaseResources()
     // restarted due to a setting change.
 
     // For more details, see the help for AudioProcessor::releaseResources()
-    track1.releaseResources();
-    track2.releaseResources();
-    track3.releaseResources();
-    track4.releaseResources();
     mixer.releaseResources();
 }
 
@@ -569,50 +307,20 @@ void MainComponent::resized()
 
 
 
-    
+    for (auto& track : tracksArray)
+    {
+        auto trackArea = rect.removeFromTop(120);
+        auto trackControlsL = trackArea.removeFromLeft(140);
+        track->recordButton.setBounds(trackControlsL.removeFromTop(60).reduced(6));
+        track->panSlider.setBounds(trackControlsL);
+        auto trackControlsR = trackArea.removeFromLeft(80);
+        trackControlsR.reduce(0, 30);
+        track->reverseButton.setBounds(trackControlsR);
+        track->slipController.setBounds(trackArea.removeFromBottom(20));
+        track->setBounds(trackArea.reduced(8));
+    }
 
     
-    auto track1Area = rect.removeFromTop(120);
-    auto track1ControlsL = track1Area.removeFromLeft(140);
-    track1RecordButton.setBounds(track1ControlsL.removeFromTop(60).reduced(6));
-    track1.panSlider.setBounds(track1ControlsL);
-    auto track1ControlsR = track1Area.removeFromLeft(80);
-    track1ControlsR.reduce(0, 30);
-    track1.reverseButton.setBounds(track1ControlsR);
-    track1.slipController.setBounds(track1Area.removeFromBottom(20));
-    track1.setBounds(track1Area.reduced(8));
-
-    auto track2Area = rect.removeFromTop(120);
-    auto track2ControlsL = track2Area.removeFromLeft(140);
-    track2RecordButton.setBounds(track2ControlsL.removeFromTop(60).reduced(6));
-    track2.panSlider.setBounds(track2ControlsL);
-    auto track2ControlsR = track2Area.removeFromLeft(80);
-    track2ControlsR.reduce(0, 30);
-    track2.reverseButton.setBounds(track2ControlsR);
-    track2.slipController.setBounds(track2Area.removeFromBottom(20));
-    track2.setBounds(track2Area.reduced(8));
-
-    auto track3Area = rect.removeFromTop(120);
-    auto track3ControlsL = track3Area.removeFromLeft(140);
-    track3RecordButton.setBounds(track3ControlsL.removeFromTop(60).reduced(6));
-    track3.panSlider.setBounds(track3ControlsL);
-    auto track3ControlsR = track3Area.removeFromLeft(80);
-    track3ControlsR.reduce(0, 30);
-    track3.reverseButton.setBounds(track3ControlsR);
-    track3.slipController.setBounds(track3Area.removeFromBottom(20));
-    track3.setBounds(track3Area.reduced(8));
-
-    auto track4Area = rect.removeFromTop(120);
-    auto track4ControlsL = track4Area.removeFromLeft(140);
-    track4RecordButton.setBounds(track4ControlsL.removeFromTop(60).reduced(6));
-    track4.panSlider.setBounds(track4ControlsL);
-    auto track4ControlsR = track4Area.removeFromLeft(80);
-    track4ControlsR.reduce(0, 30);
-    track4.reverseButton.setBounds(track4ControlsR);
-    track4.slipController.setBounds(track4Area.removeFromBottom(20));
-    track4.setBounds(track4Area.reduced(8));
-
-
 
 
 }
@@ -622,58 +330,27 @@ void MainComponent::resized()
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
-    if (source == &track1 || source == &track2 || source == &track3 || source == &track4)
+    for (auto& track : tracksArray)
     {
-        //DN:  we need this to handle things if recording is cut off automatically
-        if (!trackCurrentlyRecording())
+        if (source == track)
         {
-            track1RecordButton.setButtonText("Record");
-            track2RecordButton.setButtonText("Record");
-            track3RecordButton.setButtonText("Record");
-            track4RecordButton.setButtonText("Record");
+            //DN:  we need this to handle things if recording is cut off automatically
+            if (!trackCurrentlyRecording())
+            {
+                for (auto& i : tracksArray)
+                {
+                    i->setDisplayFullThumbnail(true);
+                    i->recordButton.setButtonText("Record");
+                    i->recordButton.setEnabled(true);
+                }
 
-            track1RecordButton.setEnabled(true);
-            track2RecordButton.setEnabled(true);
-            track3RecordButton.setEnabled(true);
-            track4RecordButton.setEnabled(true);
+            }
 
-            track1.setDisplayFullThumbnail(true);
-            track2.setDisplayFullThumbnail(true);
-            track3.setDisplayFullThumbnail(true);
-            track4.setDisplayFullThumbnail(true);
+            if (track->isPlaying())
+                changeState(Playing);
+            else
+                changeState(Stopped);
         }
-    }
-    if (source == &track1)
-    {
-        if (track1.isPlaying())
-            changeState(Playing);
-        else
-            changeState(Stopped);
-
-    }
-
-    if (source == &track2)
-    {
-            if (track2.isPlaying())
-                changeState(Playing);
-            else
-                changeState(Stopped);
-    }
-
-    if (source == &track3)
-    {
-            if (track3.isPlaying())
-                changeState(Playing);
-            else
-                changeState(Stopped);
-    }
-
-    if (source == &track4)
-    {
-            if (track4.isPlaying())
-                changeState(Playing);
-            else
-                changeState(Stopped);
     }
 }
 
@@ -799,55 +476,51 @@ void MainComponent::savedLoopSelected()
 
 void MainComponent::initializeTempWAVs()
 {
-    auto track1File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK1_FILENAME);
-    auto track2File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK2_FILENAME);
-    auto track3File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK3_FILENAME);
-    auto track4File = savedLoopDirTree.setFreshWAVInTempLoopDir(TRACK4_FILENAME);
-    track1.setLastRecording(track1File);
-    track2.setLastRecording(track2File);
-    track3.setLastRecording(track3File);
-    track4.setLastRecording(track4File);
+    for (int i = 0; i < NUM_TRACKS; ++i)
+    {
+        juce::String fileName = TRACK_FILENAME + juce::String(" ") + juce::String(i + 1);
+        auto trackFile = savedLoopDirTree.setFreshWAVInTempLoopDir(fileName);
+        tracksArray[i]->setLastRecording(trackFile);
+    }
 }
 
 void MainComponent::refreshAudioReferences()
 {
-    auto track1File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK1_FILENAME);
-    auto track2File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK2_FILENAME);
-    auto track3File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK3_FILENAME);
-    auto track4File = savedLoopDirTree.getOrCreateWAVInTempLoopDir(TRACK4_FILENAME);
-    track1.setLastRecording(track1File);
-    track2.setLastRecording(track2File);
-    track3.setLastRecording(track3File);
-    track4.setLastRecording(track4File);
+    for (int i = 0; i < NUM_TRACKS; ++i)
+    {
+        juce::String fileName = TRACK_FILENAME + juce::String(" ") + juce::String(i + 1);
+        auto trackFile = savedLoopDirTree.getOrCreateWAVInTempLoopDir(fileName);
+        tracksArray[i]->setLastRecording(trackFile);
+    }
 }
 
 //DN:  call after refreshAudioReferences to load the audio into memory and redraw waveforms
 void MainComponent::redrawAndBufferAudio()
 {
-    track1.redrawAndBufferAudio();
-    track2.redrawAndBufferAudio();
-    track3.redrawAndBufferAudio();
-    track4.redrawAndBufferAudio();
+    for (auto& track : tracksArray)
+    {
+        track->redrawAndBufferAudio();
+    }
 
 }
 
 bool MainComponent::trackCurrentlyPlaying()
 {
-    if (track1.isPlaying() || track2.isPlaying() || track3.isPlaying() || track4.isPlaying())
+    for (auto& track : tracksArray)
     {
-        return true;
+        if (track->isPlaying())
+            return true;
     }
-
     return false;
 }
 
 bool MainComponent::trackCurrentlyRecording()
 {
-    if (track1.isRecording() || track2.isRecording() || track3.isRecording() || track4.isRecording())
+    for (auto& track : tracksArray)
     {
-        return true;
+        if (track->isRecording())
+            return true;
     }
-
     return false;
 }
 
@@ -865,10 +538,10 @@ void MainComponent::changeState(TransportState newState)
             savedLoopsDropdown.setEnabled(true);
             saveButton.setEnabled(true);
             initializeButton.setEnabled(true);
-            track1.setPosition(0);
-            track2.setPosition(0);
-            track3.setPosition(0);
-            track4.setPosition(0);
+            for (auto& track : tracksArray)
+            {
+                track->setPosition(0);
+            }
             break;
 
         case Starting: 
@@ -876,21 +549,21 @@ void MainComponent::changeState(TransportState newState)
             savedLoopsDropdown.setEnabled(false);
             saveButton.setEnabled(false);
             initializeButton.setEnabled(false);
-            track1.start();
-            track2.start();
-            track3.start();
-            track4.start();
+            for (auto& track : tracksArray)
+            {
+                track->start();
+            }
             break;
 
         case Playing:                           
             stopButton.setEnabled(true);
             break;
 
-        case Stopping:                          
-            track1.stop();
-            track2.stop();
-            track3.stop();
-            track4.stop();
+        case Stopping:       
+            for (auto& track : tracksArray)
+            {
+                track->stop();
+            }
             break;
 
         }

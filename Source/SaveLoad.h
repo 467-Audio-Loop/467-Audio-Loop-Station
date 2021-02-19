@@ -16,10 +16,8 @@
 #define MASTER_FOLDER_NAME "467Audio"
 #define SAVED_LOOPS_FOLDER_NAME "Saved Loops"
 #define TEMP_LOOP_FOLDER_NAME "Temp WAVs"
-#define TRACK1_FILENAME "Loopstation Track1"
-#define TRACK2_FILENAME "Loopstation Track2"
-#define TRACK3_FILENAME "Loopstation Track3"
-#define TRACK4_FILENAME "Loopstation Track4"
+#define TRACK_FILENAME "Loopstation Track"
+#define NUM_TRACKS  4
 
 
 class DirectoryTree

@@ -2,6 +2,8 @@
 
 #include "AudioTrack.h"
 
+
+
 //==============================================================================
 /*
     This component lives inside our window, and this is where you should put all
@@ -76,17 +78,14 @@ private:
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
 
 
-    AudioTrack track1;
-    AudioTrack track2;
-    AudioTrack track3;
-    AudioTrack track4;
+    juce::OwnedArray<AudioTrack> tracksArray;
 
     juce::MixerAudioSource mixer;
 
-    juce::TextButton track1RecordButton{ "Record" };
-    juce::TextButton track2RecordButton{ "Record" };
-    juce::TextButton track3RecordButton{ "Record" };
-    juce::TextButton track4RecordButton{ "Record" };
+   // juce::TextButton track1RecordButton{ "Record" };
+   // juce::TextButton track2RecordButton{ "Record" };
+   // juce::TextButton track3RecordButton{ "Record" };
+   // juce::TextButton track4RecordButton{ "Record" };
 
 
     TransportState state;
