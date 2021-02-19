@@ -40,6 +40,24 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     track4.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
     addAndMakeVisible(track4.panLabel);
 
+    // DN: Show reverse buttons and slip controllers
+    addAndMakeVisible(track1.slipController);
+    track1.slipController.setNumDecimalPlacesToDisplay(2);
+    track1.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible(track1.reverseButton);
+    addAndMakeVisible(track2.slipController);
+    track2.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible(track2.reverseButton);
+    addAndMakeVisible(track3.slipController);
+    track3.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible(track3.reverseButton);
+    addAndMakeVisible(track4.slipController);
+    track4.slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible(track4.reverseButton);
+
+
+
+
     // AF: Adds record button and paints it
     addAndMakeVisible(track1RecordButton);
     track1RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
@@ -422,7 +440,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(1000, 800);
+    setSize(1200, 900);
 }
 
 MainComponent::~MainComponent()
@@ -554,28 +572,44 @@ void MainComponent::resized()
     
 
     
-    auto track1Area = rect.removeFromTop(80);
-    auto track1Controls = track1Area.removeFromLeft(140);
-    track1RecordButton.setBounds(track1Controls.removeFromTop(40).reduced(6));
-    track1.panSlider.setBounds(track1Controls);
+    auto track1Area = rect.removeFromTop(120);
+    auto track1ControlsL = track1Area.removeFromLeft(140);
+    track1RecordButton.setBounds(track1ControlsL.removeFromTop(60).reduced(6));
+    track1.panSlider.setBounds(track1ControlsL);
+    auto track1ControlsR = track1Area.removeFromLeft(80);
+    track1ControlsR.reduce(0, 30);
+    track1.reverseButton.setBounds(track1ControlsR);
+    track1.slipController.setBounds(track1Area.removeFromBottom(20));
     track1.setBounds(track1Area.reduced(8));
 
-    auto track2Area = rect.removeFromTop(80);
-    auto track2Controls = track2Area.removeFromLeft(140);
-    track2RecordButton.setBounds(track2Controls.removeFromTop(40).reduced(6));
-    track2.panSlider.setBounds(track2Controls);
+    auto track2Area = rect.removeFromTop(120);
+    auto track2ControlsL = track2Area.removeFromLeft(140);
+    track2RecordButton.setBounds(track2ControlsL.removeFromTop(60).reduced(6));
+    track2.panSlider.setBounds(track2ControlsL);
+    auto track2ControlsR = track2Area.removeFromLeft(80);
+    track2ControlsR.reduce(0, 30);
+    track2.reverseButton.setBounds(track2ControlsR);
+    track2.slipController.setBounds(track2Area.removeFromBottom(20));
     track2.setBounds(track2Area.reduced(8));
 
-    auto track3Area = rect.removeFromTop(80);
-    auto track3Controls = track3Area.removeFromLeft(140);
-    track3RecordButton.setBounds(track3Controls.removeFromTop(40).reduced(6));
-    track3.panSlider.setBounds(track3Controls);
+    auto track3Area = rect.removeFromTop(120);
+    auto track3ControlsL = track3Area.removeFromLeft(140);
+    track3RecordButton.setBounds(track3ControlsL.removeFromTop(60).reduced(6));
+    track3.panSlider.setBounds(track3ControlsL);
+    auto track3ControlsR = track3Area.removeFromLeft(80);
+    track3ControlsR.reduce(0, 30);
+    track3.reverseButton.setBounds(track3ControlsR);
+    track3.slipController.setBounds(track3Area.removeFromBottom(20));
     track3.setBounds(track3Area.reduced(8));
 
-    auto track4Area = rect.removeFromTop(80);
-    auto track4Controls = track4Area.removeFromLeft(140);
-    track4RecordButton.setBounds(track4Controls.removeFromTop(40).reduced(6));
-    track4.panSlider.setBounds(track4Controls);
+    auto track4Area = rect.removeFromTop(120);
+    auto track4ControlsL = track4Area.removeFromLeft(140);
+    track4RecordButton.setBounds(track4ControlsL.removeFromTop(60).reduced(6));
+    track4.panSlider.setBounds(track4ControlsL);
+    auto track4ControlsR = track4Area.removeFromLeft(80);
+    track4ControlsR.reduce(0, 30);
+    track4.reverseButton.setBounds(track4ControlsR);
+    track4.slipController.setBounds(track4Area.removeFromBottom(20));
     track4.setBounds(track4Area.reduced(8));
 
 

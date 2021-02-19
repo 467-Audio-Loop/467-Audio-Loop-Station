@@ -23,6 +23,7 @@ public:
     //==============================================================================
     void paint (juce::Graphics& g) override;
     void resized() override;
+    void resizeTrack(juce::Rectangle<int> trackArea); //DN:  added to DRY up resize function
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 
@@ -73,6 +74,7 @@ private:
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
+
 
     AudioTrack track1;
     AudioTrack track2;

@@ -159,7 +159,7 @@ private:
 
 class AudioTrack : public juce::AudioAppComponent,
     private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback,
-    public juce::Slider::Listener
+    public juce::Slider::Listener, public juce::Button::Listener
 {
 public:
     AudioTrack()
@@ -176,6 +176,11 @@ public:
         panSlider.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
         panLabel.setText("L/R", juce::dontSendNotification);
         //panLabel.attachToComponent(&panSlider, false);
+
+        slipController.addListener(this);
+        slipController.setRange(0, loopSource.getMasterLoopLength());
+
+        reverseButton.addListener(this);
 
     }
 
@@ -400,12 +405,35 @@ public:
     void sliderValueChanged(juce::Slider* slider) override
     {
         int dontworryaboutthisfornow = 1;
+
+        if (slider == &slipController)
+        {
+            loopSource.setFileStartOffset(slider->getValue());
+        }
+    }
+
+    /** Called when the button is clicked. */
+    void buttonClicked(juce::Button* button)
+    {
+        if (button == &reverseButton)
+        {
+            loopSource.reverseAudio();
+        }
+    }
+
+    /** Called when the button's state changes. */
+    void buttonStateChanged(juce::Button* button)
+    {
+
     }
 
     // AF: Slider for panning
     juce::Slider panSlider;
     juce::Label panLabel;
 
+
+    juce::TextButton reverseButton{ "Reverse" };
+    juce::Slider slipController;
 
 private:
     juce::AudioFormatManager formatManager;

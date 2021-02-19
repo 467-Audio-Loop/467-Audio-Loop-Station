@@ -28,9 +28,9 @@ class LoopSource: public juce::PositionableAudioSource, public juce::ChangeBroad
 public:
     LoopSource()
     {
-        masterLoopTempo = 60; 
-        masterLoopMeasures = 3;
-        masterLoopBeatsPerMeasure = 1;
+        masterLoopTempo = 120; 
+        masterLoopMeasures = 2;
+        masterLoopBeatsPerMeasure = 4;
         calcMasterLoopLength();
         loopBuffer.reset(new juce::AudioBuffer<float>(2, 0));  //DN: just set up a length 0 buffer so silent playback can happen 
     }
@@ -237,11 +237,16 @@ public:
         fileStartOffset = newStartOffset;
     }
 
+    void reverseAudio()
+    {
+        loopBuffer->reverse(0, loopBuffer->getNumSamples());
+    }
+
 private:
     //==============================================================================
     std::unique_ptr<juce::AudioBuffer<float>> loopBuffer;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()
     int position = 0; //DN:  important, this tracks our position as we iterate over the masterLoopLength, which can be longer and start before the audio file
-    int fileStartOffset = 0;  //DN:  set this when we want a file to always playback from the position it was recorded in masterLoop, rather than pos 0
+    int fileStartOffset = 0;  //DN:  set this to delay when the contents of the loopBuffer play back, relative to position 0
     
     bool stopped = true, playing = false, recording = false, playAcrossAllChannels = true;
     double sampleRate = 44100.0;
