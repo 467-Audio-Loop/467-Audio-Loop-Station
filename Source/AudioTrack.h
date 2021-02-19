@@ -158,8 +158,7 @@ private:
 // Component, into an AudioAppComponent that will handle each track's playback
 
 class AudioTrack : public juce::AudioAppComponent,
-    private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback,
-    public juce::Slider::Listener
+    private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback
 {
 public:
     AudioTrack()
@@ -167,16 +166,7 @@ public:
         formatManager.registerBasicFormats();
         thumbnail.addChangeListener(this);
         loopSource.addChangeListener(this);
-        deviceManager.addAudioCallback(&recorder);   
-
-        // AF: Initialize track sliders
-        panSlider.setRange(-1.0, 1.0);
-        panSlider.setValue(0.0);
-        panSlider.addListener(this);
-        panSlider.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
-        panLabel.setText("L/R", juce::dontSendNotification);
-        //panLabel.attachToComponent(&panSlider, false);
-
+        deviceManager.addAudioCallback(&recorder);
     }
 
     ~AudioTrack() override
@@ -247,7 +237,6 @@ public:
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override 
     {
         loopSource.getNextAudioBlock(bufferToFill);
-        // AF:  TODO Panning code //                                                                                                                            // **
     }
 
     void releaseResources() override 
@@ -395,18 +384,6 @@ public:
     }
 
 
-    // AF: Listener for changes of values from slider
-    // (required by Listener class)
-    void sliderValueChanged(juce::Slider* slider) override
-    {
-        int dontworryaboutthisfornow = 1;
-    }
-
-    // AF: Slider for panning
-    juce::Slider panSlider;
-    juce::Label panLabel;
-
-
 private:
     juce::AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{ 10 };
@@ -418,6 +395,7 @@ private:
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;
     juce::File lastRecording;
+
 
     // ---
     bool displayFullThumb = false;

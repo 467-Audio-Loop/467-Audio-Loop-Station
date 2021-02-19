@@ -19,27 +19,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     // AF: Initialize state enum
     state = Stopped;
 
-    // AF: Show sliders
-    addAndMakeVisible(track1.panSlider);
-    track1.panSlider.setNumDecimalPlacesToDisplay(2);
-    track1.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track1.panLabel);
-
-    addAndMakeVisible(track2.panSlider);
-    track2.panSlider.setNumDecimalPlacesToDisplay(2);
-    track2.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track2.panLabel);
-
-    addAndMakeVisible(track3.panSlider);
-    track3.panSlider.setNumDecimalPlacesToDisplay(2);
-    track3.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track3.panLabel);
-
-    addAndMakeVisible(track4.panSlider);
-    track4.panSlider.setNumDecimalPlacesToDisplay(2);
-    track4.panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-    addAndMakeVisible(track4.panLabel);
-
     // AF: Adds record button and paints it
     addAndMakeVisible(track1RecordButton);
     track1RecordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
@@ -555,27 +534,16 @@ void MainComponent::resized()
 
     
     auto track1Area = rect.removeFromTop(80);
-    auto track1Controls = track1Area.removeFromLeft(140);
-    track1RecordButton.setBounds(track1Controls.removeFromTop(40).reduced(6));
-    track1.panSlider.setBounds(track1Controls);
+    track1RecordButton.setBounds(track1Area.removeFromLeft(140).reduced(10));
     track1.setBounds(track1Area.reduced(8));
-
     auto track2Area = rect.removeFromTop(80);
-    auto track2Controls = track2Area.removeFromLeft(140);
-    track2RecordButton.setBounds(track2Controls.removeFromTop(40).reduced(6));
-    track2.panSlider.setBounds(track2Controls);
+    track2RecordButton.setBounds(track2Area.removeFromLeft(140).reduced(10));
     track2.setBounds(track2Area.reduced(8));
-
     auto track3Area = rect.removeFromTop(80);
-    auto track3Controls = track3Area.removeFromLeft(140);
-    track3RecordButton.setBounds(track3Controls.removeFromTop(40).reduced(6));
-    track3.panSlider.setBounds(track3Controls);
+    track3RecordButton.setBounds(track3Area.removeFromLeft(140).reduced(10));
     track3.setBounds(track3Area.reduced(8));
-
     auto track4Area = rect.removeFromTop(80);
-    auto track4Controls = track4Area.removeFromLeft(140);
-    track4RecordButton.setBounds(track4Controls.removeFromTop(40).reduced(6));
-    track4.panSlider.setBounds(track4Controls);
+    track4RecordButton.setBounds(track4Area.removeFromLeft(140).reduced(10));
     track4.setBounds(track4Area.reduced(8));
 
 
