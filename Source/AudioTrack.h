@@ -260,7 +260,28 @@ public:
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override 
     {
         loopSource.getNextAudioBlock(bufferToFill);
-        // AF:  TODO Panning code //                                                                                                                            // **
+
+        // AF:  Panning volume control //  
+        // AF: This value determines the channel
+        // 0 == L // 1 == R
+        int channel = 0;
+        double gain = 1 - fabs(panSliderValue);
+
+        // AF: This if statement chooses which channel is going to be muted/lowered
+        if (panSliderValue < 0)
+            channel = 1;
+        else if (panSliderValue > 0)
+            channel = 0;
+        else
+            gain = 1.0;
+
+        auto panWriter = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+
+        for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+        {
+                panWriter[sample] = panWriter[sample] * gain;
+        }
+
     }
 
     void releaseResources() override 
@@ -408,7 +429,11 @@ public:
     // (required by Listener class)
     void sliderValueChanged(juce::Slider* slider) override
     {
-        int dontworryaboutthisfornow = 1;
+        if (slider == &panSlider)
+        {
+            panSliderValue = slider->getValue();
+        }
+
 
         if (slider == &slipController)
         {
@@ -435,7 +460,7 @@ public:
     // AF: Slider for panning
     juce::Slider panSlider;
     juce::Label panLabel;
-
+    double panSliderValue = 0.0;
 
     juce::TextButton reverseButton{ "Reverse" };
     juce::Slider slipController;

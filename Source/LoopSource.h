@@ -158,8 +158,6 @@ public:
             int loopBufferSize = loopBuffer->getNumSamples();
             int maxInChannels = loopBuffer->getNumChannels();
 
- 
-
             int maxOutChannels = bufferToFill.buffer->getNumChannels();
 
             int pos = position;
