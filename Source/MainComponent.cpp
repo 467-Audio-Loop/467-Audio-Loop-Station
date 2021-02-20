@@ -314,7 +314,7 @@ void MainComponent::resized()
         track->recordButton.setBounds(trackControlsL.removeFromTop(60).reduced(6));
         track->panSlider.setBounds(trackControlsL);
         auto trackControlsR = trackArea.removeFromLeft(80);
-        trackControlsR.reduce(0, 30);
+        trackControlsR.reduce(0, 40);
         track->reverseButton.setBounds(trackControlsR);
         track->slipController.setBounds(trackArea.removeFromBottom(20));
         track->setBounds(trackArea.reduced(8));

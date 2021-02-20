@@ -178,7 +178,8 @@ public:
         //panLabel.attachToComponent(&panSlider, false);
 
         slipController.addListener(this);
-        slipController.setRange(0, loopSource.getMasterLoopLength());
+        slipController.setRange(-loopSource.getMasterLoopLength(), loopSource.getMasterLoopLength());
+        slipController.setValue(0);
 
         reverseButton.addListener(this);
 
@@ -228,11 +229,17 @@ public:
 
         if (thumbnail.getTotalLength() > 0.0)
         {
-            auto endTime = displayFullThumb ? thumbnail.getTotalLength()
-                : juce::jmax(30.0, thumbnail.getTotalLength());
+            //auto endTime = displayFullThumb ? thumbnail.getTotalLength()
+            //    : juce::jmax(30.0, thumbnail.getTotalLength());
+
+            //DN:  paint the thumbnail audio horizontally relative to master loop and the slip offset
+            auto startTime = -(double)slipController.getValue() / sampleRate;
+            auto endTime = (double)(loopSource.getMasterLoopLength() / sampleRate) + startTime;
+
+
 
             auto thumbArea = getLocalBounds();
-            thumbnail.drawChannels(g, thumbArea.reduced(2), 0.0, endTime, 1.0f);
+            thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f);
         }
         else
         {
@@ -243,10 +250,11 @@ public:
 
     //DN:  new functions needed
     //==============================================================================
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override 
+    void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override 
     {
         samplesPerBlock = samplesPerBlockExpected;
-        loopSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+        sampleRate = newSampleRate;
+        loopSource.prepareToPlay(samplesPerBlockExpected, newSampleRate);
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override 
@@ -274,10 +282,6 @@ public:
                 });
             return;
         }
-
-        //DN: set offset to current position before recording
-        //auto pos = loopSource.getPosition();
-        //loopSource.setFileStartOffset(pos);
 
         // AF: This essentially halts this code until loopSource is ready to record (pos == 0)
         while (!loopSource.readyToRecord())
@@ -409,6 +413,7 @@ public:
         if (slider == &slipController)
         {
             loopSource.setFileStartOffset(slider->getValue());
+            repaint();
         }
     }
 
@@ -443,6 +448,7 @@ private:
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
 
     int samplesPerBlock = 44100;
+    int sampleRate = 44100;
     bool aboutToOverflow = false;
 
     AudioRecorder recorder{ thumbnail };

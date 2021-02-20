@@ -82,12 +82,6 @@ private:
 
     juce::MixerAudioSource mixer;
 
-   // juce::TextButton track1RecordButton{ "Record" };
-   // juce::TextButton track2RecordButton{ "Record" };
-   // juce::TextButton track3RecordButton{ "Record" };
-   // juce::TextButton track4RecordButton{ "Record" };
-
-
     TransportState state;
 
     InputSource inputAudio;
