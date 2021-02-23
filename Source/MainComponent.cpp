@@ -415,8 +415,25 @@ void MainComponent::saveButtonClicked()
         }
             
     }
-    unsavedChanges = false;
 
+
+    //DN: save the track states to an xml file in the project folder
+
+    // create an outer node
+    juce::XmlElement projectState("projectState");
+
+    for (int i = 0; i < NUM_TRACKS; ++i)
+    {
+        projectState.addChildElement(tracksArray[i]->getTrackState(i+1));
+    }
+
+    //write it to a file in this project's folder
+    juce::File destFile = savedLoopDirTree.getProjectFolder(newFolderName).getChildFile(PROJECT_STATE_XML_FILENAME);
+    
+    projectState.writeTo(destFile);
+
+
+    unsavedChanges = false;
 }
 
 void MainComponent::initializeButtonClicked()
@@ -469,6 +486,25 @@ void MainComponent::savedLoopSelected()
         redrawAndBufferAudio();
     }
 
+    //load xml from project folder
+    auto projectFolder = savedLoopDirTree.getProjectFolder(savedLoopFolderName);
+    juce::XmlDocument projectStateDoc(juce::File(projectFolder.getChildFile(PROJECT_STATE_XML_FILENAME)));
+
+    //DN: can only try to acces the result of this if the file exists
+    if (auto projectState = projectStateDoc.getDocumentElement())
+    {
+        //iterate through xml and restore the state of each track
+        for (int i = 0; i < NUM_TRACKS; ++i)
+        {
+            forEachXmlChildElement(*projectState, trackState)
+            {
+                juce::String trackName = TRACK_FILENAME + juce::String(i + 1);
+                if (trackState->hasTagName(trackName))
+                    tracksArray[i]->restoreTrackState(trackState);
+            }
+        }
+    }
+
     currentProjectListID = savedLoopsDropdown.getSelectedId();
     unsavedChanges = false;
 
@@ -478,7 +514,7 @@ void MainComponent::initializeTempWAVs()
 {
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
-        juce::String fileName = TRACK_FILENAME + juce::String(" ") + juce::String(i + 1);
+        juce::String fileName = TRACK_FILENAME + juce::String(i + 1);
         auto trackFile = savedLoopDirTree.setFreshWAVInTempLoopDir(fileName);
         tracksArray[i]->setLastRecording(trackFile);
     }
@@ -488,7 +524,7 @@ void MainComponent::refreshAudioReferences()
 {
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
-        juce::String fileName = TRACK_FILENAME + juce::String(" ") + juce::String(i + 1);
+        juce::String fileName = TRACK_FILENAME + juce::String(i + 1);
         auto trackFile = savedLoopDirTree.getOrCreateWAVInTempLoopDir(fileName);
         tracksArray[i]->setLastRecording(trackFile);
     }

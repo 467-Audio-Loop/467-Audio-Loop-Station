@@ -448,12 +448,49 @@ public:
         if (button == &reverseButton)
         {
             loopSource.reverseAudio();
+                                                                //account for slip here
+            isReversed = !isReversed;
         }
     }
 
     /** Called when the button's state changes. */
     void buttonStateChanged(juce::Button* button)
     {
+    }
+
+    juce::XmlElement* getTrackState(int trackNum)
+    {
+        juce::String trackElementName = TRACK_FILENAME + juce::String(trackNum);
+        // create an inner element..
+        juce::XmlElement* trackElement = new juce::XmlElement(trackElementName);
+
+        trackElement->setAttribute("id", trackNum);
+        trackElement->setAttribute("pan", panSliderValue);
+        trackElement->setAttribute("isReversed", isReversed);
+        trackElement->setAttribute("slipValue", slipController.getValue());
+
+        return trackElement;
+    }
+
+    void restoreTrackState(juce::XmlElement* trackState)
+    {
+        //set pan
+        panSliderValue = trackState->getDoubleAttribute("pan");
+        panSlider.setValue(panSliderValue);
+
+        //set up slip (needs to happen before reverse)
+        const double newSlipValue = trackState->getDoubleAttribute("slipValue");
+        slipController.setValue(newSlipValue);
+        loopSource.setFileStartOffset(newSlipValue);
+        repaint();
+
+        //set up reverse
+        isReversed = trackState->getBoolAttribute("isReveresed");
+        if (isReversed)
+        {
+            loopSource.reverseAudio();
+                                                                            //account for slip here
+        }
 
     }
 
@@ -475,6 +512,7 @@ private:
     int samplesPerBlock = 44100;
     int sampleRate = 44100;
     bool aboutToOverflow = false;
+    bool isReversed = false;
 
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;

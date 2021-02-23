@@ -16,8 +16,9 @@
 #define MASTER_FOLDER_NAME "467Audio"
 #define SAVED_LOOPS_FOLDER_NAME "Saved Loops"
 #define TEMP_LOOP_FOLDER_NAME "Temp WAVs"
-#define TRACK_FILENAME "Loopstation Track"
+#define TRACK_FILENAME "LoopstationTrack"
 #define NUM_TRACKS  4
+#define PROJECT_STATE_XML_FILENAME "projectState.xml"
 
 
 class DirectoryTree
@@ -147,6 +148,11 @@ public:
 
         return true;
 
+    }
+
+    juce::File getProjectFolder(juce::String folderName)
+    {
+        return savedLoopsFolder.getChildFile(folderName);
     }
 
 
