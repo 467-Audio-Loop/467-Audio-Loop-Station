@@ -52,7 +52,7 @@ public:
                 // Now create a WAV writer object that writes to our output stream...
                 juce::WavAudioFormat wavFormat;
 
-                if (auto writer = wavFormat.createWriterFor(fileStream.get(), sampleRate, 1, 16, {}, 0))
+                if (auto writer = wavFormat.createWriterFor(fileStream.get(), sampleRate, inputChannels, 16, {}, 0))
                 {
                     fileStream.release(); // (passes responsibility for deleting the stream to the writer object that is now using it)
 
@@ -108,9 +108,14 @@ public:
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override
     {
         sampleRate = device->getCurrentSampleRate();
+
         // AF: Get number of input channels
-        if (device->getActiveInputChannels() != 1)
-            inputChannels = device->getActiveInputChannels().toInteger();   // AF: This is returning a number different than expected, gotta double check
+        auto activeInputChannels = device->getActiveInputChannels();
+        inputChannels = activeInputChannels.getHighestBit() + 1;
+
+        // AF: Get number of output channels
+        auto activeOutputChannels = device->getActiveOutputChannels();
+        outputChannels = activeOutputChannels.getHighestBit() + 1;
     }
 
     void audioDeviceStopped() override
@@ -140,11 +145,22 @@ public:
                 juce::FloatVectorOperations::clear(outputChannelData[i], numSamples);
     }
 
+    int getInputChannels() 
+    {
+        return inputChannels;
+    }
+
+    int getOutputChannels()
+    {
+        return outputChannels;
+    }
+
 private:
     juce::AudioThumbnail& thumbnail;
     juce::TimeSliceThread backgroundThread{ "Audio Recorder Thread" }; // the thread that will write our audio data to disk
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter; // the FIFO used to buffer the incoming data
     int inputChannels = 1;
+    int outputChannels = 2;
     double sampleRate = 0.0;
     juce::int64 nextSampleNum = 0;
 
@@ -239,7 +255,7 @@ public:
 
 
             auto thumbArea = getLocalBounds();
-            thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f);
+            thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f); // 1.0f is zoom
         }
         else
         {
@@ -261,27 +277,30 @@ public:
     {
         loopSource.getNextAudioBlock(bufferToFill);
 
-        // AF:  Panning volume control //  
-        // AF: This value determines the channel
-        // 0 == L // 1 == R
-        int channel = 0;
-        double gain = 1 - fabs(panSliderValue);
-
-        // AF: This if statement chooses which channel is going to be muted/lowered
-        if (panSliderValue < 0)
-            channel = 1;
-        else if (panSliderValue > 0)
-            channel = 0;
-        else
-            gain = 1.0;
-
-        auto panWriter = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
-
-        for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+        // AF: If only 1 output (mono), panning shouldn't work
+        if (recorder.getOutputChannels() > 1)
         {
-                panWriter[sample] = panWriter[sample] * gain;
-        }
+            // AF:  Panning volume control //  
+            // AF: This value determines the channel
+            // 0 == L // 1 == R
+            int channel = 0;
+            double gain = 1 - fabs(panSliderValue);
 
+            // AF: This if statement chooses which channel is going to be muted/lowered
+            if (panSliderValue < 0)
+                channel = 1;
+            else if (panSliderValue > 0)
+                channel = 0;
+            else
+                gain = 1.0;
+
+            auto panWriter = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+
+            for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+            {
+                panWriter[sample] = panWriter[sample] * gain;
+            }
+        }
     }
 
     void releaseResources() override 

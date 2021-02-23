@@ -218,6 +218,7 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     auto activeOutputChannels = device->getActiveOutputChannels();
     auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
     auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
+    auto test = device->getInputChannelNames();
 
     auto sourceBuffer = std::make_unique<juce::AudioBuffer<float>>(maxInputChannels, bufferToFill.numSamples);
 
@@ -234,6 +235,7 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
         {
             auto actualInputChannel = channel % maxInputChannels;
 
+            
             if (!activeInputChannels[channel])
             {
                 bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
@@ -364,6 +366,15 @@ void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
     inputAudio.setGain(1.0);
+
+    // AF: Stop tracks if stop button is clicked
+    for (auto& track : tracksArray)
+    {
+        if (track->isRecording())
+        {
+            track->stopRecording();
+        }
+    }
 }
 
 void MainComponent::saveButtonClicked()
