@@ -240,6 +240,11 @@ public:
         loopBuffer->reverse(0, loopBuffer->getNumSamples());
     }
 
+    juce::AudioBuffer<float>* getLoopBuffer()
+    {
+        return loopBuffer.get();
+    }
+
 private:
     //==============================================================================
     std::unique_ptr<juce::AudioBuffer<float>> loopBuffer;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()

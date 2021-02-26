@@ -37,6 +37,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         // DN: Show reverse buttons and slip controllers
         addAndMakeVisible(track->reverseButton);
         addAndMakeVisible(track->slipController);
+        track->slipController.setVisible(false); //DN: don't want to see these initially
         track->slipController.setNumDecimalPlacesToDisplay(2);
         track->slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
@@ -234,27 +235,27 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     /// DN: This code grabs the audio input, puts it in a buffer, and sends that to an AudioSource class
     //  which can be added to or removed from our main mixer as needed
   
-    for (auto channel = 0; channel < maxOutputChannels; ++channel)
+     //DN: if input is mono, this will write the same data twice, but that's ok
+     // we need to account for the outputChannels in case it's set to mono or nothing
+    //even though we're not writing to the output buffer here
+    if (maxInputChannels == 0)
     {
-        if (maxInputChannels == 0)
-        {
+        for (auto channel = 0; channel < maxOutputChannels; ++channel)
             bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
-            sourceBuffer->clear();
-        }
-        else
-        {
-            auto actualInputChannel = channel % maxInputChannels;
 
-            //DN: get the input and fill the correct channel of our source buffer
-            auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
-                bufferToFill.startSample);
+        sourceBuffer->clear();
+    }
+    for (auto channel = 0; channel < maxInputChannels; ++channel)
+    {
+        //DN: get the input and fill that channel of our source buffer
+        auto* reader = bufferToFill.buffer->getReadPointer(channel,
+            bufferToFill.startSample);
 
-            auto* writer = sourceBuffer->getWritePointer(channel % maxInputChannels, bufferToFill.startSample);
+        auto* writer = sourceBuffer->getWritePointer(channel, bufferToFill.startSample);
 
-            for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
-                writer[sample] = reader[sample];
+        for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+            writer[sample] = reader[sample];
 
-        }
     }
 
 
@@ -416,7 +417,7 @@ void MainComponent::saveButtonClicked()
     //DN: now we refresh the dropdown list with the current folders
     //and find the folder we just saved To, then make it the current selection
     juce::StringArray folderNames = savedLoopDirTree.getLoopFolderNamesArray();
-    savedLoopsDropdown.clear();
+    savedLoopsDropdown.clear(juce::dontSendNotification);
     savedLoopsDropdown.addItemList(folderNames,1); //DN: set first item index offset to 1, 0 will be when no project is selected
     for (int i = 0; i < folderNames.size(); ++i)
     {

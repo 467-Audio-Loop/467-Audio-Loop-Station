@@ -88,16 +88,16 @@ public:
 
 
     //DN:  this method will read the audio from a file and draw the thumbnail
-    void setThumbnailSource(const juce::File& file)
-    {
-        //DN:  need this here because when switching projects 
-        //the thumbnail was  not updating any tracks that were not being replaced (i.e. for the project being 
-        // loaded those tracks are empty)  and showing stale waveforms
-        if(!file.exists())
-            thumbnail.setSource(nullptr);
-        else
-            thumbnail.setSource(new juce::FileInputSource(file)); 
-    }
+    //void setThumbnailSource(const juce::File& file)
+    //{
+    //    //DN:  need this here because when switching projects 
+    //    //the thumbnail was  not updating any tracks that were not being replaced (i.e. for the project being 
+    //    // loaded those tracks are empty)  and showing stale waveforms
+    //    if(!file.exists())
+    //        thumbnail.setSource(nullptr);
+    //    else
+    //        thumbnail.setSource(new juce::FileInputSource(file)); 
+    //}
 
     bool isRecording() const
     {
@@ -198,7 +198,6 @@ public:
         slipController.setValue(0);
 
         reverseButton.addListener(this);
-
     }
 
     ~AudioTrack() override
@@ -255,7 +254,9 @@ public:
 
 
             auto thumbArea = getLocalBounds();
+            
             thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f); // 1.0f is zoom
+            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
         else
         {
@@ -419,6 +420,7 @@ public:
         auto file = lastRecording;
         auto reader = formatManager.createReaderFor(file);
 
+
         if (reader != nullptr)
         {
             //DN: set up a memory buffer to hold the audio for this loop file
@@ -427,6 +429,15 @@ public:
             reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
             //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
             delete reader;
+
+            //DN: account for reverse
+            if (isReversed)
+            {
+                loopBuffer->reverse(0, loopBuffer->getNumSamples());
+            }
+
+            redrawThumbnailWithBuffer(loopBuffer.get());
+
             // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
             loopSource.setBuffer(loopBuffer.release());
         }
@@ -434,13 +445,25 @@ public:
         {
             //if the lastRecording object doesn't exist, we want to reset the loopSource to be blank
             auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(2, 0);
+
+            redrawThumbnailWithBuffer(loopBuffer.get());
+
             // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
             loopSource.setBuffer(loopBuffer.release());
         }
 
-        recorder.setThumbnailSource(lastRecording);
         repaint();
 
+    }
+
+    void redrawThumbnailWithBuffer(juce::AudioBuffer<float>* loopBuffer)
+    {
+        //DN: temp const buffer used only for drawing
+        juce::AudioBuffer<float> tmpBuffer(loopBuffer->getArrayOfWritePointers(), loopBuffer->getNumChannels(), loopBuffer->getNumSamples());
+        //for (int ch = 0; ch < loopBuffer->getNumChannels(); ++ch)
+        //    tmpBuffer.copyFrom(ch, 0, loopBuffer.get(), loopBuffer->getNumSamples());
+        thumbnail.reset(loopBuffer->getNumChannels(), sampleRate, loopBuffer->getNumSamples());
+        thumbnail.addBlock(0, tmpBuffer, 0, loopBuffer->getNumSamples());
     }
 
 
@@ -468,7 +491,11 @@ public:
         if (button == &reverseButton)
         {
             loopSource.reverseAudio();
-                                                                //account for slip here
+
+            //account for slip here?
+            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
+
+
             isReversed = !isReversed;
         }
     }
@@ -505,11 +532,11 @@ public:
         repaint();
 
         //set up reverse
-        isReversed = trackState->getBoolAttribute("isReveresed");
+        isReversed = trackState->getBoolAttribute("isReversed");
         if (isReversed)
         {
             loopSource.reverseAudio();
-                                                                            //account for slip here
+            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());             //account for slip here
         }
 
     }
@@ -575,10 +602,12 @@ private:
         if (!lastRecording.exists())
         {
             slipController.setEnabled(false);
+            slipController.setVisible(false);
         }
         else
         {
-            slipController.setEnabled(false);
+            slipController.setEnabled(true);
+            slipController.setVisible(true);
         }
 
         sendSynchronousChangeMessage();
@@ -629,7 +658,6 @@ public:
                 }
             }
         }
-
 
     }
 
