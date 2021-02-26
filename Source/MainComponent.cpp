@@ -211,46 +211,90 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-   // bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
+    // bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
     auto* device = deviceManager.getCurrentAudioDevice();
     auto activeInputChannels = device->getActiveInputChannels();
     auto activeOutputChannels = device->getActiveOutputChannels();
-    auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
-    auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
-    auto test = device->getInputChannelNames();
+    if (maxInputChannels == 0) maxInputChannels = activeInputChannels.countNumberOfSetBits();
+    if (maxOutputChannels == 0) maxOutputChannels = activeOutputChannels.countNumberOfSetBits();
+    int inputChannelCount = 0;
+    for (int inputChannel = 0; inputChannel < maxInputChannels; inputChannel++)
+        if (activeInputChannels[inputChannel]) inputChannelCount++;
+
+    //auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
+    //auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
 
     auto sourceBuffer = std::make_unique<juce::AudioBuffer<float>>(maxInputChannels, bufferToFill.numSamples);
 
     /// DN: This code grabs the audio input, puts it in a buffer, and sends that to an AudioSource class
     //  which can be added to or removed from our main mixer as needed
-  
-    for (auto channel = 0; channel < maxOutputChannels; ++channel)
+
+    for (auto outputChannel = 0; outputChannel < maxOutputChannels; ++outputChannel)
     {
-        if ((!activeOutputChannels[channel]) || maxInputChannels == 0)
+        if ((!activeOutputChannels[outputChannel]) || maxInputChannels == 0)
         {
-            bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
+            bufferToFill.buffer->clear(outputChannel, bufferToFill.startSample, bufferToFill.numSamples);
         }
         else
         {
-            auto actualInputChannel = channel % maxInputChannels;
-
-            
-            if (!activeInputChannels[channel])
+            if (inputChannelCount == 1)
             {
-                bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
+                for (int inputChannel = 0; inputChannel < maxInputChannels; inputChannel++)
+                {
+                    if (!activeInputChannels[inputChannel])
+                    {
+                        bufferToFill.buffer->clear(outputChannel, bufferToFill.startSample, bufferToFill.numSamples);
+                    }
+                    else
+                    {
+                        //DN: get the input and fill the correct channel of our source buffer
+                        auto* reader = bufferToFill.buffer->getReadPointer(inputChannel,
+                            bufferToFill.startSample);
+
+                        auto* writer = sourceBuffer->getWritePointer(outputChannel, bufferToFill.startSample);
+
+                        for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+                            writer[sample] = reader[sample];
+                    }
+                }
             }
-            else
-            {
-                //DN: get the input and fill the correct channel of our source buffer
-                auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
-                    bufferToFill.startSample);
+            else {
+                //auto actualInputChannel = outputChannel % maxInputChannels;
+                //if (!activeInputChannels[actualInputChannel])
+                //{
+                //    bufferToFill.buffer->clear(actualInputChannel, bufferToFill.startSample, bufferToFill.numSamples);
+                //}
+                //else
+                //{
+                //    //DN: get the input and fill the correct channel of our source buffer
+                //    auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
+                //        bufferToFill.startSample);
 
-                auto* writer = sourceBuffer->getWritePointer(channel % maxInputChannels, bufferToFill.startSample);
+                //    auto* writer = sourceBuffer->getWritePointer(actualInputChannel % maxInputChannels, bufferToFill.startSample);
 
-                for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
-                    writer[sample] = reader[sample];
+                //    for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+                //        writer[sample] = reader[sample];
 
+                //}
+                for (int inputChannel = 0; inputChannel < maxInputChannels; inputChannel++)
+                {
+                    if (!activeInputChannels[inputChannel])
+                    {
+                        bufferToFill.buffer->clear(outputChannel, bufferToFill.startSample, bufferToFill.numSamples);
+                    }
+                    else
+                    {
+                        //DN: get the input and fill the correct channel of our source buffer
+                        auto* reader = bufferToFill.buffer->getReadPointer(inputChannel % maxInputChannels,
+                            bufferToFill.startSample);
+
+                        auto* writer = sourceBuffer->getWritePointer(inputChannel, bufferToFill.startSample);
+
+                        for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+                            writer[sample] = reader[sample];
+                    }
+                }
             }
         }
     }

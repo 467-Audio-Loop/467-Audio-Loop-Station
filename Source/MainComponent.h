@@ -77,6 +77,9 @@ private:
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
 
+    // AF: Channels
+    int maxOutputChannels = 0;
+    int maxInputChannels = 0;
 
     juce::OwnedArray<AudioTrack> tracksArray;
 
