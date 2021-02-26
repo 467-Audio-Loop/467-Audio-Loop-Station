@@ -225,8 +225,8 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     auto* device = deviceManager.getCurrentAudioDevice();
     auto activeInputChannels = device->getActiveInputChannels();
     auto activeOutputChannels = device->getActiveOutputChannels();
-    auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
-    auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
+    auto maxInputChannels = activeInputChannels.countNumberOfSetBits();
+    auto maxOutputChannels = activeOutputChannels.countNumberOfSetBits();
     auto test = device->getInputChannelNames();
 
     auto sourceBuffer = std::make_unique<juce::AudioBuffer<float>>(maxInputChannels, bufferToFill.numSamples);
@@ -236,36 +236,30 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
   
     for (auto channel = 0; channel < maxOutputChannels; ++channel)
     {
-        if ((!activeOutputChannels[channel]) || maxInputChannels == 0)
+        if (maxInputChannels == 0)
         {
             bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
+            sourceBuffer->clear();
         }
         else
         {
             auto actualInputChannel = channel % maxInputChannels;
 
-            
-            if (!activeInputChannels[channel])
-            {
-                bufferToFill.buffer->clear(channel, bufferToFill.startSample, bufferToFill.numSamples);
-            }
-            else
-            {
-                //DN: get the input and fill the correct channel of our source buffer
-                auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
-                    bufferToFill.startSample);
+            //DN: get the input and fill the correct channel of our source buffer
+            auto* reader = bufferToFill.buffer->getReadPointer(actualInputChannel,
+                bufferToFill.startSample);
 
-                auto* writer = sourceBuffer->getWritePointer(channel % maxInputChannels, bufferToFill.startSample);
+            auto* writer = sourceBuffer->getWritePointer(channel % maxInputChannels, bufferToFill.startSample);
 
-                for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
-                    writer[sample] = reader[sample];
+            for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+                writer[sample] = reader[sample];
 
-            }
         }
     }
+
+
     //send filled buffer to the AudioSource
     inputAudio.setBuffer(sourceBuffer.release());
-
 
 
     //DN: We've added the tracks to the mixer already, so this will trigger all of them

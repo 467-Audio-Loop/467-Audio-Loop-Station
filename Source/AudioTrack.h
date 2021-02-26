@@ -611,6 +611,7 @@ public:
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) 
     {
         
+
         int loopBufferSize = inputBuffer->getNumSamples();
         int maxInChannels = inputBuffer->getNumChannels();
 
@@ -628,6 +629,8 @@ public:
                 }
             }
         }
+
+
     }
 
     void setBuffer(juce::AudioSampleBuffer* newBuffer)
