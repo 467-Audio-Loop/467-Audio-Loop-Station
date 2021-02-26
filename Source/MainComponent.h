@@ -10,7 +10,8 @@
     your controls and content.
 */
 class MainComponent  : public juce::AudioAppComponent,
-                       public juce::ChangeListener
+                       public juce::ChangeListener,
+                       public juce::KeyListener
 {
 public:
     //==============================================================================
@@ -50,6 +51,9 @@ private:
     void initializeButtonClicked();
     void savedLoopSelected();
 
+    bool keyPressed(const juce::KeyPress& key,
+        Component* originatingComponent);
+
     // Loading/Saving Audio to from tracks
     void initializeTempWAVs();
     void refreshAudioReferences();
@@ -73,6 +77,7 @@ private:
     DirectoryTree savedLoopDirTree;
     juce::TextButton saveButton{ "Save Project" };
     juce::TextButton initializeButton{ "New Project" };
+    juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown

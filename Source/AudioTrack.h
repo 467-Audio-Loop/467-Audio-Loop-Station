@@ -111,11 +111,11 @@ public:
 
         // AF: Get number of input channels
         auto activeInputChannels = device->getActiveInputChannels();
-        inputChannels = activeInputChannels.getHighestBit() + 1;
+        inputChannels = activeInputChannels.countNumberOfSetBits();
 
         // AF: Get number of output channels
         auto activeOutputChannels = device->getActiveOutputChannels();
-        outputChannels = activeOutputChannels.getHighestBit() + 1;
+        outputChannels = activeOutputChannels.countNumberOfSetBits();
     }
 
     void audioDeviceStopped() override
@@ -459,6 +459,7 @@ public:
             loopSource.setFileStartOffset(slider->getValue());
             repaint();
         }
+
     }
 
     /** Called when the button is clicked. */
@@ -513,6 +514,14 @@ public:
 
     }
 
+    void initializeTrackState()
+    {
+        panSliderValue = 0.0;
+        panSlider.setValue(0.0);
+        isReversed = false;
+        slipController.setValue(0.0);
+    }
+
     // AF: Slider for panning
     juce::Slider panSlider;
     juce::Label panLabel;
@@ -560,6 +569,16 @@ private:
             //stopRecording();
             //repaint();
             aboutToOverflow = true;
+        }
+
+        //DN: any time any change happens check if we need to turn on/off slip controller
+        if (!lastRecording.exists())
+        {
+            slipController.setEnabled(false);
+        }
+        else
+        {
+            slipController.setEnabled(false);
         }
 
         sendSynchronousChangeMessage();

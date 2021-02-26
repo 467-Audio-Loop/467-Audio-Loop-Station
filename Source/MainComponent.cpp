@@ -179,6 +179,15 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
    
     deviceManager.addChangeListener(this);  
 
+    unsavedProgressWarning.addKeyListener(this);
+    saveProjectDialog.addKeyListener(this);  //DN:these are so we can hit Enter on the alert windows
+
+
+    //sets up the alert window for when you hit Save
+    saveProjectDialog.addTextEditor("newProjectName", "");
+    saveProjectDialog.addButton("Cancel", 0);
+    saveProjectDialog.addButton("Save", 1);
+
 
     // Make sure you set the size of the component after
     // you add any child components.
@@ -379,32 +388,30 @@ void MainComponent::stopButtonClicked()
 
 void MainComponent::saveButtonClicked()
 {
-    juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
-
-    //sets up the alert window for when you hit Save
-    saveProjectDialog.addTextEditor("newProjectName", "");
-    saveProjectDialog.addButton("Cancel", 0);
-    saveProjectDialog.addButton("Save", 1);
-    
     juce::String newFolderName;
 
     //DN: if this project is new, we need to name it/create a folder for it
     if (savedLoopsDropdown.getSelectedId() == 0)
     {
         auto result = saveProjectDialog.runModalLoop();
-        newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
-        if (newFolderName.length() == 0)
-            saveProjectDialog.addTextBlock("New Project Name Cannot Be Empty");
-        while (newFolderName.length() == 0)
+        if (result == 1)
         {
-            result = saveProjectDialog.runModalLoop();
             newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
+            if (newFolderName.length() == 0)
+                saveProjectDialog.addTextBlock("New Project Name Cannot Be Empty");
+            while (newFolderName.length() == 0)
+            {
+                result = saveProjectDialog.runModalLoop();
+                newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
+            }
+            savedLoopDirTree.saveWAVsTo(newFolderName);
         }
+
         saveProjectDialog.setVisible(false);
-
-        savedLoopDirTree.saveWAVsTo(newFolderName);
-
-
+        //DN: the dialog box just goes behind everything until it gets called to the front again
+        //    so we need to clear the text box for next time
+        auto textEditor = saveProjectDialog.getTextEditor("newProjectName");
+        textEditor->setText("");
     }
     else
     {
@@ -444,6 +451,7 @@ void MainComponent::saveButtonClicked()
     projectState.writeTo(destFile);
 
 
+
     unsavedChanges = false;
 }
 
@@ -465,6 +473,10 @@ void MainComponent::initializeButtonClicked()
     currentProjectListID = 0;
     initializeTempWAVs();
     redrawAndBufferAudio();
+    for (auto& track : tracksArray)
+    {
+        track->initializeTrackState();
+    }
     unsavedChanges = false;
 }
 
@@ -519,6 +531,13 @@ void MainComponent::savedLoopSelected()
     currentProjectListID = savedLoopsDropdown.getSelectedId();
     unsavedChanges = false;
 
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
+{
+    if (originatingComponent == &unsavedProgressWarning || originatingComponent == &saveProjectDialog)
+        originatingComponent->exitModalState(1);  //DN: if someone hits enter on an Alertwindow, it's the same as clicking OK
+    return true;
 }
 
 void MainComponent::initializeTempWAVs()
