@@ -13,6 +13,7 @@
 #include "AudioLiveScrollingDisplay.h"
 #include "LoopSource.h"
 #include "SaveLoad.h"
+#include "customUI.h"
 
 
 
@@ -175,7 +176,7 @@ private:
 
 class AudioTrack : public juce::AudioAppComponent,
     private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback,
-    public juce::Slider::Listener, public juce::Button::Listener
+    public juce::Slider::Listener, public juce::Button::Listener, private juce::Timer, public juce::MouseListener
 {
 public:
     AudioTrack()
@@ -196,9 +197,15 @@ public:
         slipController.addListener(this);
         slipController.setRange(-loopSource.getMasterLoopLength(), loopSource.getMasterLoopLength());
         slipController.setValue(0);
+        slipController.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
+
 
         reverseButton.addListener(this);
+
+        startTimer(10); //used for vertical line position marker
     }
+
+
 
     ~AudioTrack() override
     {
@@ -251,18 +258,30 @@ public:
             auto startTime = -(double)slipController.getValue() / sampleRate;
             auto endTime = (double)(loopSource.getMasterLoopLength() / sampleRate) + startTime;
 
-
-
             auto thumbArea = getLocalBounds();
             
             thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f); // 1.0f is zoom
-            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
+
+
+            //DN: paint vertical line to indicate playhead position
+            g.setColour(juce::Colours::white);
+            auto audioPosition = (float)loopSource.getPosition();
+            auto drawPosition = (audioPosition / loopSource.getMasterLoopLength()) * (float)thumbArea.getWidth() + (float)thumbArea.getX();            
+            g.drawLine(drawPosition, (float)thumbArea.getY(), drawPosition, (float)thumbArea.getBottom(), 2.0f);                       
+
+           // redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
         else
         {
             g.setFont(14.0f);
            // g.drawFittedText("(No file recorded)", getLocalBounds(), juce::Justification::centred, 2);
         }
+
+
+
+
+
+
     }
 
     //DN:  new functions needed
@@ -415,6 +434,7 @@ public:
     }
 
     //similar to stopRecording, call this after setAsLastRecording to load audio from disk into memory and redraw thumbnail
+    //also used when loading a project
     void redrawAndBufferAudio()
     {
         auto file = lastRecording;
@@ -456,6 +476,7 @@ public:
 
     }
 
+    //DN: helper function to draw the thumbnail
     void redrawThumbnailWithBuffer(juce::AudioBuffer<float>* loopBuffer)
     {
         //DN: temp const buffer used only for drawing
@@ -549,6 +570,32 @@ public:
         slipController.setValue(0.0);
     }
 
+    void mouseEnter(const juce::MouseEvent& event)
+    {
+        setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+
+
+    void mouseExit(const juce::MouseEvent& event)
+    {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+
+    void mouseDown(const juce::MouseEvent& event)
+    {
+        dragStart = slipController.getValue();
+    }
+
+    void mouseDrag(const juce::MouseEvent& event)
+    {
+        auto thumbArea = getLocalBounds();
+        auto difference = (double)event.getDistanceFromDragStartX()/(double)thumbArea.getWidth() * loopSource.getMasterLoopLength();
+        auto newOffset = dragStart + difference;
+        slipController.setValue(newOffset);
+        repaint();
+    }
+
+
     // AF: Slider for panning
     juce::Slider panSlider;
     juce::Label panLabel;
@@ -560,6 +607,13 @@ public:
     juce::TextButton recordButton{ "Record" };
 
 private:
+
+    void timerCallback()
+    {
+        repaint();
+    }
+
+
     juce::AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{ 10 };
     juce::AudioThumbnail thumbnail{ 512, formatManager, thumbnailCache };
@@ -568,6 +622,7 @@ private:
     int sampleRate = 44100;
     bool aboutToOverflow = false;
     bool isReversed = false;
+    juce::int64 dragStart = 0;
 
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;

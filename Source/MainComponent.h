@@ -26,7 +26,6 @@ public:
     //==============================================================================
     void paint (juce::Graphics& g) override;
     void resized() override;
-    void resizeTrack(juce::Rectangle<int> trackArea); //DN:  added to DRY up resize function
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 

@@ -36,10 +36,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
         // DN: Show reverse buttons and slip controllers
         addAndMakeVisible(track->reverseButton);
-        addAndMakeVisible(track->slipController);
-        track->slipController.setVisible(false); //DN: don't want to see these initially
-        track->slipController.setNumDecimalPlacesToDisplay(2);
-        track->slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+       // addAndMakeVisible(track->slipController);
+       // track->slipController.setVisible(false); //DN: don't want to see these initially
+        //track->slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
         // AF: Adds record button and paints it
         addAndMakeVisible(track->recordButton);
@@ -283,6 +282,8 @@ void MainComponent::paint (juce::Graphics& g)
     // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     // You can add your drawing code here!
+
+
 }
 
 void MainComponent::resized()
@@ -322,7 +323,7 @@ void MainComponent::resized()
         auto trackControlsR = trackArea.removeFromLeft(80);
         trackControlsR.reduce(0, 40);
         track->reverseButton.setBounds(trackControlsR);
-        track->slipController.setBounds(trackArea.removeFromBottom(20));
+       // track->slipController.setBounds(trackArea.removeFromBottom(20));
         track->setBounds(trackArea.reduced(8));
     }
 
@@ -359,6 +360,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         }
     }
 }
+
 
 void MainComponent::playButtonClicked()
 {
@@ -477,7 +479,6 @@ void MainComponent::initializeButtonClicked()
 
 void MainComponent::savedLoopSelected()
 {
-
     //creates a warning here that will reset the dropdown and abort this function if they hit Cancel
     if (savedLoopsDropdown.getSelectedId() != 0 && unsavedChanges)
     {
