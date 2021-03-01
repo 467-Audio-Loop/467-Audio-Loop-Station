@@ -88,18 +88,6 @@ public:
     }
 
 
-    //DN:  this method will read the audio from a file and draw the thumbnail
-    //void setThumbnailSource(const juce::File& file)
-    //{
-    //    //DN:  need this here because when switching projects 
-    //    //the thumbnail was  not updating any tracks that were not being replaced (i.e. for the project being 
-    //    // loaded those tracks are empty)  and showing stale waveforms
-    //    if(!file.exists())
-    //        thumbnail.setSource(nullptr);
-    //    else
-    //        thumbnail.setSource(new juce::FileInputSource(file)); 
-    //}
-
     bool isRecording() const
     {
         return activeWriter.load() != nullptr;
@@ -191,7 +179,8 @@ public:
         panSlider.setValue(0.0);
         panSlider.addListener(this);
         panSlider.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
-        panLabel.setText("L/R", juce::dontSendNotification);
+        panSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
+       // panLabel.setText("L/R", juce::dontSendNotification);
         //panLabel.attachToComponent(&panSlider, false);
 
         slipController.addListener(this);
@@ -199,6 +188,13 @@ public:
         slipController.setValue(0);
         slipController.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
 
+        gainSlider.setRange(0.0, 1.0);
+        gainSlider.setValue(1.0);
+        gainSlider.addListener(this);
+        gainSlider.setDoubleClickReturnValue(true, 1.0, juce::ModifierKeys::altModifier);
+        gainSlider.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
+        gainSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
+        //gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
 
         reverseButton.addListener(this);
 
@@ -243,11 +239,14 @@ public:
         displayFullThumb = displayFull;
         repaint();
     }
-
+    
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(juce::Colours::darkslategrey);
-        g.setColour(juce::Colours::cyan);
+        auto thumbnailBorder = 8;
+        g.fillAll(MAIN_BACKGROUND_COLOR);
+        g.setColour(MAIN_DRAW_COLOR);
+        const juce::Rectangle<float> area(getLocalBounds().reduced(thumbnailBorder).toFloat());
+        g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
 
         if (thumbnail.getTotalLength() > 0.0)
         {
@@ -258,22 +257,22 @@ public:
             auto startTime = -(double)slipController.getValue() / sampleRate;
             auto endTime = (double)(loopSource.getMasterLoopLength() / sampleRate) + startTime;
 
-            auto thumbArea = getLocalBounds();
+            auto thumbArea = getLocalBounds().reduced(thumbnailBorder);
             
-            thumbnail.drawChannels(g, thumbArea.reduced(2), startTime, endTime, 1.0f); // 1.0f is zoom
+            thumbnail.drawChannels(g, thumbArea, startTime, endTime, 1.0f); // 1.0f is zoom
 
 
             //DN: paint vertical line to indicate playhead position
-            g.setColour(juce::Colours::white);
+            g.setColour(MAIN_DRAW_COLOR);
             auto audioPosition = (float)loopSource.getPosition();
             auto drawPosition = (audioPosition / loopSource.getMasterLoopLength()) * (float)thumbArea.getWidth() + (float)thumbArea.getX();            
-            g.drawLine(drawPosition, (float)thumbArea.getY(), drawPosition, (float)thumbArea.getBottom(), 2.0f);                       
+            g.drawLine(drawPosition, (float)thumbArea.getY()+8, drawPosition, (float)thumbArea.getBottom()-8, 2.0f);                       
 
            // redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
         else
         {
-            g.setFont(14.0f);
+            //g.setFont(14.0f);
            // g.drawFittedText("(No file recorded)", getLocalBounds(), juce::Justification::centred, 2);
         }
 
@@ -284,8 +283,6 @@ public:
 
     }
 
-    //DN:  new functions needed
-    //==============================================================================
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override 
     {
         samplesPerBlock = samplesPerBlockExpected;
@@ -300,6 +297,18 @@ public:
         // AF: If only 1 output (mono), panning shouldn't work
         if (recorder.getOutputChannels() > 1)
         {
+
+            ////DN: overall gain , applies to both channels
+            int numOutputChannels = bufferToFill.buffer->getNumChannels();
+            for (int channel = 0; channel < numOutputChannels; ++channel)
+            {
+                auto gainWriter = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+                for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
+                {
+                    gainWriter[sample] = gainWriter[sample] * gainSliderValue;
+                }
+            }
+
             // AF:  Panning volume control //  
             // AF: This value determines the channel
             // 0 == L // 1 == R
@@ -497,12 +506,19 @@ public:
             panSliderValue = slider->getValue();
         }
 
+        if(slider == &gainSlider)
+        {
+            gainSliderValue = slider->getValue();
+        }
+
 
         if (slider == &slipController)
         {
             loopSource.setFileStartOffset(slider->getValue());
             repaint();
         }
+
+
 
     }
 
@@ -536,6 +552,7 @@ public:
         trackElement->setAttribute("pan", panSliderValue);
         trackElement->setAttribute("isReversed", isReversed);
         trackElement->setAttribute("slipValue", slipController.getValue());
+        trackElement->setAttribute("gain", gainSlider.getValue());
 
         return trackElement;
     }
@@ -545,6 +562,10 @@ public:
         //set pan
         panSliderValue = trackState->getDoubleAttribute("pan");
         panSlider.setValue(panSliderValue);
+
+        //set gain
+        gainSliderValue = trackState->getDoubleAttribute("gain");
+        gainSlider.setValue(gainSliderValue);
 
         //set up slip (needs to happen before reverse)
         const double newSlipValue = trackState->getDoubleAttribute("slipValue");
@@ -566,6 +587,7 @@ public:
     {
         panSliderValue = 0.0;
         panSlider.setValue(0.0);
+        gainSlider.setValue(1.0);
         isReversed = false;
         slipController.setValue(0.0);
     }
@@ -603,9 +625,11 @@ public:
 
     juce::TextButton reverseButton{ "Reverse" };
     juce::Slider slipController;
+    juce::Slider gainSlider;
+    double gainSliderValue = 1.0;
 
-    juce::TextButton recordButton{ "Record" };
-
+    //juce::TextButton recordButton{ "Record" };
+    TransportButton recordButton{ "recordButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Record };
 private:
 
     void timerCallback()
@@ -673,14 +697,14 @@ private:
 
 
 //DN:  A simple AudioSource class where we can send the audio input in buffer form, to be read from by our main mixer
-class InputSource : public juce::AudioSource
+class InputMonitor : public juce::AudioSource
 {
 public:
-    InputSource()
+    InputMonitor()
     {
         inputBuffer.reset(new juce::AudioBuffer<float>(2, 0));
     }
-    ~InputSource()
+    ~InputMonitor()
     {
 
     }
@@ -729,5 +753,6 @@ public:
 private:
     std::unique_ptr<juce::AudioBuffer<float>> inputBuffer;
     double gain = 1.0;
+
 };
 

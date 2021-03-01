@@ -14,10 +14,13 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                                                 false, // treat channels as stereo pairs
                                                 false) // hide advanced options
 {
-    addAndMakeVisible(audioSetupComp);
+    //addAndMakeVisible(audioSetupComp);
+
 
     // AF: Initialize state enum
     state = Stopped;
+
+    setLookAndFeel(&customLookAndFeel);
 
     //DN: create tracks 
     for (int i = 0; i < NUM_TRACKS; ++i)
@@ -31,8 +34,11 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     {
         addAndMakeVisible(track->panSlider);
         track->panSlider.setNumDecimalPlacesToDisplay(2);
-        track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-        addAndMakeVisible(track->panLabel);
+        //track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
+        //addAndMakeVisible(track->panLabel);
+
+        addAndMakeVisible(track->gainSlider);
+        track->gainSlider.setNumDecimalPlacesToDisplay(2);
 
         // DN: Show reverse buttons and slip controllers
         addAndMakeVisible(track->reverseButton);
@@ -42,7 +48,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
         // AF: Adds record button and paints it
         addAndMakeVisible(track->recordButton);
-        track->recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
+        //track->recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
         track->recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
         track->addChangeListener(this);
@@ -123,26 +129,31 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     mixer.addInputSource(&inputAudio, false);
 
+
+    addAndMakeVisible(&appTitle);
+    appTitle.setJustificationType(juce::Justification::centred);
+    appTitle.setFont(customLookAndFeel.titleFont);
+
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
     playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    //playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     playButton.setEnabled(true);
 
     // AF: Adds stop button and paints it
+
     addAndMakeVisible(&stopButton);
     stopButton.onClick = [this] { stopButtonClicked(); };
-    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     stopButton.setEnabled(false);
 
     //DN:  add saved loops label and dropdown menu
-    addAndMakeVisible(&savedLoopsLabel);
+    //addAndMakeVisible(&savedLoopsLabel);
     addAndMakeVisible(&savedLoopsDropdown);
     addAndMakeVisible(&saveButton);
     addAndMakeVisible(&initializeButton);
 
     saveButton.onClick = [this] { saveButtonClicked(); };
-   // saveButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    saveButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     saveButton.setEnabled(true);
     
 
@@ -157,8 +168,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     //DN:  set up the dropdown that lets you load previously saved projects
     //DN: set first item index offset to 1, 0 will be when no project is selected
     savedLoopsDropdown.addItemList(savedLoopDirTree.getLoopFolderNamesArray(),1); 
-    savedLoopsDropdown.setTextWhenNothingSelected("No Project Loaded");
-    savedLoopsDropdown.setTextWhenNoChoicesAvailable("No Projects Found");
+    savedLoopsDropdown.setTextWhenNothingSelected("NO PROJECT LOADED");
+    savedLoopsDropdown.setTextWhenNoChoicesAvailable("NO PROJECTS FOUND");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
 
 
@@ -197,6 +208,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 MainComponent::~MainComponent()
 {
     deviceManager.removeChangeListener(this);
+    setLookAndFeel(nullptr);
     
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
@@ -282,7 +294,7 @@ void MainComponent::paint (juce::Graphics& g)
     // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     // You can add your drawing code here!
-
+    g.fillAll(juce::Colours::white);
 
 }
 
@@ -292,24 +304,28 @@ void MainComponent::resized()
     // If you add any child components, this is where you should
     // update their positions.
     auto rect = getLocalBounds().reduced(10);
-    auto globalControlsArea = rect.removeFromTop(400);
+    auto leftColumnWidth = 280;
+    auto titleArea = rect.removeFromTop(40);
+    appTitle.setBounds(titleArea.removeFromLeft(leftColumnWidth).reduced(10));
 
-    audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
+    int headerHeight = 120;
+    auto headerArea = rect.removeFromTop(headerHeight);
+    //audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
 
-    auto transportControlsArea = globalControlsArea.removeFromTop(80);
-    transportControlsArea.reduce(50, 0);
-    stopButton.setBounds(transportControlsArea.removeFromLeft(transportControlsArea.proportionOfWidth(0.5f)).reduced(10));
-    playButton.setBounds(transportControlsArea.reduced(10));
+    auto transportButtonArea = headerArea.removeFromLeft(leftColumnWidth);
+    int playStopMargin = 30;
+    transportButtonArea.removeFromLeft(playStopMargin);
+    transportButtonArea.removeFromRight(playStopMargin);
 
-    auto gapBetweenStuff = globalControlsArea.removeFromTop(50);
+    stopButton.setBounds(transportButtonArea.removeFromLeft(transportButtonArea.getWidth()/2).reduced(0, headerHeight*0.22f));
+    playButton.setBounds(transportButtonArea.reduced(0, headerHeight*0.22f));
 
-    auto savedLoopsArea = globalControlsArea.removeFromTop(150);
-    savedLoopsLabel.setBounds(savedLoopsArea.removeFromTop(50));
-    savedLoopsLabel.setJustificationType(juce::Justification::centredBottom);
-    savedLoopsDropdown.setBounds(savedLoopsArea.removeFromTop(50).reduced(5));
-    auto saveClearButtonsArea = (savedLoopsArea.removeFromTop(50));
-    saveButton.setBounds(saveClearButtonsArea.removeFromLeft(proportionOfWidth(0.25f)).reduced(10));
-    initializeButton.setBounds(saveClearButtonsArea.reduced(10));
+
+    savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(0,headerHeight*0.33f));
+    int saveClearButtonsWidth = 60;
+
+    saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
+    initializeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
 
 
 
@@ -317,14 +333,15 @@ void MainComponent::resized()
     for (auto& track : tracksArray)
     {
         auto trackArea = rect.removeFromTop(120);
-        auto trackControlsL = trackArea.removeFromLeft(140);
-        track->recordButton.setBounds(trackControlsL.removeFromTop(60).reduced(6));
-        track->panSlider.setBounds(trackControlsL);
+        auto trackControlsL = trackArea.removeFromLeft(200);
+        track->recordButton.setBounds(trackControlsL.removeFromLeft(80).reduced(6));
+        track->panSlider.setBounds(trackControlsL.removeFromLeft(60));
+        track->gainSlider.setBounds(trackControlsL.removeFromLeft(60));
         auto trackControlsR = trackArea.removeFromLeft(80);
         trackControlsR.reduce(0, 40);
         track->reverseButton.setBounds(trackControlsR);
        // track->slipController.setBounds(trackArea.removeFromBottom(20));
-        track->setBounds(trackArea.reduced(8));
+        track->setBounds(trackArea);
     }
 
     

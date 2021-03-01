@@ -68,18 +68,25 @@ private:
 
     juce::AudioDeviceSelectorComponent audioSetupComp;
 
+
+    //Header
+    juce::Label appTitle{ "appTitle" ,"L O O P S P A C E"};
     // Global controls
-    juce::TextButton playButton{ "Play" };
-    juce::TextButton stopButton{ "Stop" };
-    juce::Label savedLoopsLabel{ "savedLoopLabel","Current Project File" };
+    //juce::TextButton playButton{ "Play" };
+    //juce::TextButton stopButton{ "Stop" };
+    TransportButton stopButton{ "stopButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Stop };
+    TransportButton playButton{ "playButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Play };
+    //juce::Label savedLoopsLabel{ "savedLoopLabel","Current Project File" };
     juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
     DirectoryTree savedLoopDirTree;
-    juce::TextButton saveButton{ "Save Project" };
-    juce::TextButton initializeButton{ "New Project" };
+    juce::TextButton saveButton{ "SAVE" };
+    juce::TextButton initializeButton{ "NEW" };
     juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
+
+    CustomLookAndFeel customLookAndFeel;
 
 
     juce::OwnedArray<AudioTrack> tracksArray;
@@ -88,7 +95,9 @@ private:
 
     TransportState state;
 
-    InputSource inputAudio;
+    InputMonitor inputAudio;
+
+
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
