@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AudioTrack.h"
+#include "Metronome.h"
 
 
 
@@ -28,6 +29,10 @@ public:
     void resized() override;
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
+
+    //==============================================================================
+    // AF: Metronome
+    void metronomeButtonClicked();
 
 private:
 
@@ -97,6 +102,8 @@ private:
 
     InputMonitor inputAudio;
 
+    Metronome metronome;
+    juce::TextButton metronomeButton{ "METRONOME" };
 
 
 

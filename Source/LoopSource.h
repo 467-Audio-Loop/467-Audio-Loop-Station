@@ -245,6 +245,11 @@ public:
         return loopBuffer.get();
     }
 
+    int getBpm()
+    {
+        return masterLoopTempo;
+    }
+
 private:
     //==============================================================================
     std::unique_ptr<juce::AudioBuffer<float>> loopBuffer;  //DN: array containing the audio we've read into memory in AudioTrack.h stopRecording()

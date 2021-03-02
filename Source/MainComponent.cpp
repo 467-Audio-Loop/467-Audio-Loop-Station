@@ -203,6 +203,11 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     // Make sure you set the size of the component after
     // you add any child components.
     setSize(1200, 900);
+
+    // AF: Metronome
+    mixer.addInputSource(&metronome, false);
+    addAndMakeVisible(&metronomeButton);
+    metronomeButton.onClick = [this] { metronomeButtonClicked(); };
 }
 
 MainComponent::~MainComponent()
@@ -326,7 +331,7 @@ void MainComponent::resized()
 
     saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
     initializeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
-
+    metronomeButton.setBounds(headerArea.removeFromRight(120).reduced(0, headerHeight * 0.33f));
 
 
 
@@ -448,7 +453,6 @@ void MainComponent::saveButtonClicked()
             
     }
 
-
     //DN: save the track states to an xml file in the project folder
 
     // create an outer node
@@ -492,6 +496,18 @@ void MainComponent::initializeButtonClicked()
         track->initializeTrackState();
     }
     unsavedChanges = false;
+}
+
+void MainComponent::metronomeButtonClicked()
+{
+    if (metronome.getState() == Metronome::Stopped)
+    {
+        metronome.start();
+    }
+    else if (metronome.getState() == Metronome::Playing) 
+    {
+        metronome.stop();
+    }
 }
 
 void MainComponent::savedLoopSelected()
