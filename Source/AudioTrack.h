@@ -721,7 +721,7 @@ public:
         
 
         int loopBufferSize = inputBuffer->getNumSamples();
-        int maxInChannels = inputBuffer->getNumChannels();
+        int maxInChannels =  inputBuffer->getNumChannels();
 
         int maxOutChannels = bufferToFill.buffer->getNumChannels();
 

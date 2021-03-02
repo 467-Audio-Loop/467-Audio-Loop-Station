@@ -16,7 +16,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 {
     //addAndMakeVisible(audioSetupComp);
 
-
     // AF: Initialize state enum
     state = Stopped;
 
@@ -202,7 +201,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(1200, 900);
+    setSize(850, 675);
 }
 
 MainComponent::~MainComponent()
@@ -321,7 +320,7 @@ void MainComponent::resized()
     playButton.setBounds(transportButtonArea.reduced(0, headerHeight*0.22f));
 
 
-    savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(0,headerHeight*0.33f));
+    savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(8,headerHeight*0.33f));
     int saveClearButtonsWidth = 60;
 
     saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
@@ -382,13 +381,13 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 void MainComponent::playButtonClicked()
 {
     changeState(Starting);
-    inputAudio.setGain(0.0);
+    //inputAudio.setGain(0.0);
 }
 
 void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
-    inputAudio.setGain(1.0);
+    //inputAudio.setGain(1.0);
 
     // AF: Stop tracks if stop button is clicked
     for (auto& track : tracksArray)
