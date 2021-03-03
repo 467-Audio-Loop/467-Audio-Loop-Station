@@ -84,18 +84,17 @@ public:
 
 
     //Call this for all tracks to keep them in sync
-    void setMasterLoop(int tempo, int measures, int beatsPerMeasure)
+    void setMasterLoop(int tempo, int beatsPerLoop)
     {
         int masterLoopTempo = tempo;
-        int masterLoopMeasures = measures;
-        int masterLoopBeatsPerMeasure = beatsPerMeasure;
+        int masterLoopBeatsPerLoop = beatsPerLoop;
+        calcMasterLoopLength();
     }
 
     //DN: calculates the length in samples of the master loop (important - masterLoopLength is used in the audio processing block)
     void calcMasterLoopLength()
     {
-        int totalBeats = masterLoopBeatsPerMeasure * masterLoopMeasures;
-        double lengthInSeconds = (double)(60.0f / masterLoopTempo) * totalBeats;
+        double lengthInSeconds = (double)(60.0f / masterLoopTempo) * masterLoopBeatsPerLoop;
         masterLoopLength = int((lengthInSeconds * sampleRate) + 0.5f); //the 0.5 is to account for the integer cast, allows for correct rounding
     }
     
@@ -265,8 +264,7 @@ private:
     juce::CriticalSection callbackLock;
 
     int masterLoopTempo;
-    int masterLoopMeasures;
-    int masterLoopBeatsPerMeasure;
+    int masterLoopBeatsPerLoop;
 
     int masterLoopLength; //DN: length in SAMPLES of the loop, so this depends on tempo, measures ,timesig, and sample Rate
 

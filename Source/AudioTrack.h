@@ -277,10 +277,6 @@ public:
         }
 
 
-
-
-
-
     }
 
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override 
@@ -615,6 +611,11 @@ public:
         auto newOffset = dragStart + difference;
         slipController.setValue(newOffset);
         repaint();
+    }
+
+    void setMasterLoop(int tempo, int beatsPerLoop)
+    {
+        loopSource.setMasterLoop(tempo, beatsPerLoop);
     }
 
 
