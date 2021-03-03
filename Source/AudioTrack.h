@@ -415,9 +415,9 @@ public:
     }
 
     //Call this for all tracks to keep them in sync
-    void setMasterLoop(int tempo, int measures, int beatsPerMeasure)
+    void setMasterLoop(int tempo, int measures)
     {
-        loopSource.setMasterLoop(tempo, measures, beatsPerMeasure);
+        loopSource.setMasterLoop(tempo, measures);
     }
 
     // AF: Same function from LoopSource.h in order to access it from MainComponent.cpp
@@ -612,12 +612,6 @@ public:
         slipController.setValue(newOffset);
         repaint();
     }
-
-    void setMasterLoop(int tempo, int beatsPerLoop)
-    {
-        loopSource.setMasterLoop(tempo, beatsPerLoop);
-    }
-
 
     // AF: Slider for panning
     juce::Slider panSlider;

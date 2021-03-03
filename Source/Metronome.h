@@ -47,43 +47,41 @@ public:
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
     {
-        if (state == Playing)
+        mUpdateInterval = 60.0 / mBpm * mSampleRate;
+        const auto bufferSize = bufferToFill.numSamples;
+
+        mTotalSamples += bufferSize;
+
+        mSamplesRemaining = mTotalSamples % mUpdateInterval;
+
+        if ((mSamplesRemaining + bufferSize) >= mUpdateInterval)
         {
-            const auto bufferSize = bufferToFill.numSamples;
+            const auto timeToStartPlaying = mUpdateInterval - mSamplesRemaining;
+            pMetronomeSample->setNextReadPosition(0);
 
-            mTotalSamples += bufferSize;
+            bool played = false;
 
-            mSamplesRemaining = mTotalSamples % mUpdateInterval;
-
-            if ((mSamplesRemaining + bufferSize) >= mUpdateInterval)
+            for (auto sample = 0; sample < bufferSize; sample++)
             {
-                const auto timeToStartPlaying = mUpdateInterval - mSamplesRemaining;
-                pMetronomeSample->setNextReadPosition(0);
-
-                bool played = false;
-
-                for (auto sample = 0; sample < bufferSize; sample++)
-                {
-                    if (sample == timeToStartPlaying)
-                    {
-                        played = true;
-                        pMetronomeSample->getNextAudioBlock(bufferToFill);
-                    }
-                }
-
-                // AF: Need this in case timeToStartPlaying ends up being exactly == bufferSize
-                if (played == false)
+                if (sample == timeToStartPlaying && state == Playing)
                 {
                     played = true;
                     pMetronomeSample->getNextAudioBlock(bufferToFill);
                 }
             }
 
-            if (pMetronomeSample->getNextReadPosition() != 0)
+            // AF: Need this in case timeToStartPlaying ends up being exactly == bufferSize
+            if (played == false && state == Playing)
             {
+                played = true;
                 pMetronomeSample->getNextAudioBlock(bufferToFill);
             }
-        }       
+        }
+
+        if (pMetronomeSample->getNextReadPosition() != 0 && state == Playing)
+        {
+            pMetronomeSample->getNextAudioBlock(bufferToFill);
+        }      
     }
 
     // AF: Getter
@@ -94,6 +92,7 @@ public:
     // AF: Setter
     void setBpm(int newBpm) {
         mBpm = newBpm;
+        reset();
     }
 
     void reset()
@@ -112,8 +111,14 @@ public:
         return state;
     }
 
+    void setState(mPlayState newState)
+    {
+        state = newState;
+    }
+
     void start()
     {
+        gain = 1.0;
         state = Playing;
     }
 
@@ -128,12 +133,18 @@ public:
         // AF: Required override by parent class AudioSource
     }
 
+    void setGain(double newGain)
+    {
+        gain = newGain;
+    }
+
 private:
     int mTotalSamples{ 0 };
     double mSampleRate{ 0 };
     int mBpm{ 120 };
     int mUpdateInterval{ 0 };
     int mSamplesRemaining{ 0 };
+    double gain{ 1.0 };
 
     mPlayState state{ Stopped };
 

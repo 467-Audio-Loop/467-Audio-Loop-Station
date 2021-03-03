@@ -29,8 +29,7 @@ public:
     LoopSource()
     {
         masterLoopTempo = 120; 
-        masterLoopMeasures = 2;
-        masterLoopBeatsPerMeasure = 4;
+        masterLoopBeatsPerLoop = 16;
         calcMasterLoopLength();
         loopBuffer.reset(new juce::AudioBuffer<float>(2, 0));  //DN: just set up a length 0 buffer so silent playback can happen 
     }
@@ -86,8 +85,8 @@ public:
     //Call this for all tracks to keep them in sync
     void setMasterLoop(int tempo, int beatsPerLoop)
     {
-        int masterLoopTempo = tempo;
-        int masterLoopBeatsPerLoop = beatsPerLoop;
+        masterLoopTempo = tempo;
+        masterLoopBeatsPerLoop = beatsPerLoop;
         calcMasterLoopLength();
     }
 
@@ -148,7 +147,7 @@ public:
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override
     {
         const juce::ScopedLock sl(callbackLock);
-
+        
 
         bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
@@ -160,7 +159,6 @@ public:
             int maxOutChannels = bufferToFill.buffer->getNumChannels();
 
             int pos = position;
-
             for (int i = 0; i < maxOutChannels; ++i)
             {
                 auto writer = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);

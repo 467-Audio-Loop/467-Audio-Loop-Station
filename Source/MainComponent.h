@@ -12,7 +12,8 @@
 */
 class MainComponent  : public juce::AudioAppComponent,
                        public juce::ChangeListener,
-                       public juce::KeyListener
+                       public juce::KeyListener,
+    public juce::TextEditor::Listener
 {
 public:
     //==============================================================================
@@ -33,6 +34,11 @@ public:
     //==============================================================================
     // AF: Metronome
     void metronomeButtonClicked();
+
+    //==============================================================================
+    // AF: Text Box Listeners
+    void textEditorReturnKeyPressed(juce::TextEditor &textEditor) override;
+    void textEditorFocusLost(juce::TextEditor &textEditor) override;
 
 private:
 
@@ -105,7 +111,10 @@ private:
     Metronome metronome;
     juce::TextButton metronomeButton{ "METRONOME" };
 
-
+    juce::TextEditor tempoBox;
+    juce::Label tempoBoxLabel;
+    juce::TextEditor beatsBox;
+    juce::Label beatsBoxLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

@@ -21,6 +21,28 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     setLookAndFeel(&customLookAndFeel);
 
+    // AF: Tempo and beats control
+    addAndMakeVisible(&tempoBox);
+    tempoBox.setText("120");
+    tempoBox.setInputRestrictions(3, "0123456789");
+    tempoBox.addListener(this);
+    addAndMakeVisible(&tempoBoxLabel);
+    tempoBoxLabel.setText("Tempo", juce::dontSendNotification);
+    tempoBoxLabel.attachToComponent(&tempoBox, false);
+    addAndMakeVisible(&beatsBox);
+    beatsBox.setText("16");
+    beatsBox.setInputRestrictions(2, "0123456789");
+    beatsBox.addListener(this);
+    addAndMakeVisible(&beatsBoxLabel);
+    beatsBoxLabel.setText("Beats", juce::dontSendNotification);
+    beatsBoxLabel.attachToComponent(&beatsBox, false);
+
+    // AF: Metronome
+    mixer.addInputSource(&metronome, false);
+    addAndMakeVisible(&metronomeButton);
+    metronome.setBpm(tempoBox.getText().getIntValue());
+    metronomeButton.onClick = [this] { metronomeButtonClicked(); };
+
     //DN: create tracks 
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
@@ -28,9 +50,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         tracksArray.add(track);
     }
 
-
     for (auto& track : tracksArray)
     {
+        track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
         addAndMakeVisible(track->panSlider);
         track->panSlider.setNumDecimalPlacesToDisplay(2);
         //track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
@@ -60,7 +82,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         //callback lambda for each track's record button
         track->recordButton.onClick = [this, &track]
         {
-
+            tempoBox.setReadOnly(true);
 
             if (track->isRecording())
             {
@@ -202,11 +224,6 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     // Make sure you set the size of the component after
     // you add any child components.
     setSize(1200, 900);
-
-    // AF: Metronome
-    mixer.addInputSource(&metronome, false);
-    addAndMakeVisible(&metronomeButton);
-    metronomeButton.onClick = [this] { metronomeButtonClicked(); };
 }
 
 MainComponent::~MainComponent()
@@ -331,6 +348,8 @@ void MainComponent::resized()
     saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
     initializeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
     metronomeButton.setBounds(headerArea.removeFromRight(120).reduced(0, headerHeight * 0.33f));
+    tempoBox.setBounds(headerArea.removeFromRight(40).reduced(0, headerHeight * 0.33f));
+    beatsBox.setBounds(headerArea.removeFromRight(40).reduced(0, headerHeight * 0.33f));
 
 
 
@@ -490,6 +509,7 @@ void MainComponent::initializeButtonClicked()
     currentProjectListID = 0;
     initializeTempWAVs();
     redrawAndBufferAudio();
+    tempoBox.setReadOnly(false);
     for (auto& track : tracksArray)
     {
         track->initializeTrackState();
@@ -639,6 +659,7 @@ void MainComponent::changeState(TransportState newState)
             break;
 
         case Starting: 
+            metronome.reset();
             playButton.setEnabled(false);
             savedLoopsDropdown.setEnabled(false);
             saveButton.setEnabled(false);
@@ -653,7 +674,8 @@ void MainComponent::changeState(TransportState newState)
             stopButton.setEnabled(true);
             break;
 
-        case Stopping:       
+        case Stopping:     
+            metronome.stop();
             for (auto& track : tracksArray)
             {
                 track->stop();
@@ -661,5 +683,37 @@ void MainComponent::changeState(TransportState newState)
             break;
 
         }
+    }
+}
+
+// AF: Text Box Listeners
+void MainComponent::textEditorReturnKeyPressed(juce::TextEditor &textEditor)
+{
+    if (&textEditor == &tempoBox)
+    {
+        metronome.setBpm(textEditor.getText().getIntValue());
+        for (auto& track : tracksArray)
+            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+    }
+
+    if (&textEditor == &beatsBox)
+    {
+        for (auto& track : tracksArray)
+            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+    }
+}
+void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
+{
+    if (&textEditor == &tempoBox)
+    {
+        metronome.setBpm(textEditor.getText().getIntValue());
+        for (auto& track : tracksArray)
+            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+    }
+
+    if (&textEditor == &beatsBox)
+    {
+        for (auto& track : tracksArray)
+            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
     }
 }
