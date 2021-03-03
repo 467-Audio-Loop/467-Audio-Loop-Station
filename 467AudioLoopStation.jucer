@@ -4,6 +4,7 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
   <MAINGROUP id="Zaz6JM" name="467AudioLoopStation">
     <GROUP id="{9BFC0E40-AAAC-86F9-39A1-F0CDF85FA472}" name="Source">
+      <FILE id="T3qTBQ" name="Metronome.h" compile="0" resource="0" file="Source/Metronome.h"/>
       <FILE id="agGedb" name="customUI.h" compile="0" resource="0" file="Source/customUI.h"/>
       <FILE id="C3Ijnz" name="SaveLoad.h" compile="0" resource="0" file="Source/SaveLoad.h"/>
       <FILE id="K6VlDv" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -35,6 +36,7 @@
         <MODULEPATH id="juce_graphics" path="../../../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../../../../../JUCE/modules"/>
         <MODULEPATH id="juce_gui_extra" path="../../../../../../../JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2019>
   </EXPORTFORMATS>
@@ -46,6 +48,7 @@
     <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
