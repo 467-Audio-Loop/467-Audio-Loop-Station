@@ -4,16 +4,22 @@ const bool includeInput = true;
 
 //==============================================================================
 // AF: Constructor declaration for MainComponent()
-MainComponent::MainComponent() : audioSetupComp(deviceManager,
-                                                0,     // minimum input channels
-                                                256,   // maximum input channels
-                                                0,     // minimum output channels
-                                                256,   // maximum output channels
-                                                false, // ability to select midi inputs
-                                                false, // ability to select midi output device
-                                                false, // treat channels as stereo pairs
-                                                false) // hide advanced options
+MainComponent::MainComponent()
 {
+    //DN:: set up audio settings menu
+    audioSetupComp = std::make_unique<juce::AudioDeviceSelectorComponent>(
+        deviceManager,
+        0,     // minimum input channels
+        256,   // maximum input channels
+        0,     // minimum output channels
+        256,   // maximum output channels
+        false, // ability to select midi inputs
+        false, // ability to select midi output device
+        false, // treat channels as stereo pairs
+        false);
+    audioSetupComp->setLookAndFeel(&settingsLF);
+
+
     //addAndMakeVisible(audioSetupComp);
 
     // AF: Initialize state enum
@@ -25,16 +31,20 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     addAndMakeVisible(&tempoBox);
     tempoBox.setText("120");
     tempoBox.setInputRestrictions(3, "0123456789");
+    tempoBox.setJustification(juce::Justification::centred);
     tempoBox.addListener(this);
     addAndMakeVisible(&tempoBoxLabel);
-    tempoBoxLabel.setText("Tempo", juce::dontSendNotification);
+    tempoBoxLabel.setText("TEMPO", juce::dontSendNotification);
+    tempoBoxLabel.setJustificationType(juce::Justification::centred);
     tempoBoxLabel.attachToComponent(&tempoBox, false);
     addAndMakeVisible(&beatsBox);
     beatsBox.setText("16");
+    beatsBox.setJustification(juce::Justification::centred);
     beatsBox.setInputRestrictions(2, "0123456789");
     beatsBox.addListener(this);
     addAndMakeVisible(&beatsBoxLabel);
-    beatsBoxLabel.setText("Beats", juce::dontSendNotification);
+    beatsBoxLabel.setText("BEATS", juce::dontSendNotification);
+    beatsBoxLabel.setJustificationType(juce::Justification::centred);
     beatsBoxLabel.attachToComponent(&beatsBox, false);
 
     // AF: Metronome
@@ -49,6 +59,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
         auto track = new AudioTrack;
         tracksArray.add(track);
     }
+
+
 
     for (auto& track : tracksArray)
     {
@@ -87,11 +99,12 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
             if (track->isRecording())
             {
                 track->stopRecording();
+                
 
                 //inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
 
-
-                track->recordButton.setButtonText("Record");
+                track->setShouldLightUp(false);
+                //track->recordButton.setButtonText("Record");
 
                 // AF: Enable other track "Record" buttons
                 for (auto& otherTrack : tracksArray)
@@ -131,7 +144,8 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                     return;
                 }
 
-                track->recordButton.setButtonText("Stop");
+                //track->recordButton.setButtonText("Stop");
+                track->setShouldLightUp(true);
 
                 //AF: Make other record buttons greyed out
                 // AF: Enable other track "Record" buttons
@@ -142,11 +156,17 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                 }
 
                 track->startRecording();
+                track->slipController.setValue(0);
 
                 unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
             }
         };
     }
+
+    //DN: Set up default directory loop wav files and feed them to Audio track objects
+    initializeTempWAVs();
+
+    redrawAndBufferAudio();
 
     mixer.addInputSource(&inputAudio, false);
 
@@ -172,23 +192,24 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
     addAndMakeVisible(&savedLoopsDropdown);
     addAndMakeVisible(&saveButton);
     addAndMakeVisible(&initializeButton);
+    addAndMakeVisible(&settingsButton);
 
     saveButton.onClick = [this] { saveButtonClicked(); };
-    saveButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     saveButton.setEnabled(true);
     
 
     initializeButton.onClick = [this] { initializeButtonClicked(); };
-    // initializeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     initializeButton.setEnabled(true);
 
+    settingsButton.onClick = [this] { settingsButtonClicked(); };
+    settingsButton.setEnabled(true);
 
-    //DN: Set up default directory loop wav files and feed them to Audio track objects
-    initializeTempWAVs();
+
 
     //DN:  set up the dropdown that lets you load previously saved projects
     //DN: set first item index offset to 1, 0 will be when no project is selected
     savedLoopsDropdown.addItemList(savedLoopDirTree.getLoopFolderNamesArray(),1); 
+    savedLoopsDropdown.setJustificationType(juce::Justification::centred);
     savedLoopsDropdown.setTextWhenNothingSelected("NO PROJECT LOADED");
     savedLoopsDropdown.setTextWhenNoChoicesAvailable("NO PROJECTS FOUND");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
@@ -211,11 +232,16 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
    
     deviceManager.addChangeListener(this);  
 
+    unsavedProgressWarning.setLookAndFeel(&customLookAndFeel);
+    unsavedProgressWarning.addButton("Cancel", 0);
+    unsavedProgressWarning.addButton("OK", 1);
+
     unsavedProgressWarning.addKeyListener(this);
     saveProjectDialog.addKeyListener(this);  //DN:these are so we can hit Enter on the alert windows
 
 
     //sets up the alert window for when you hit Save
+    saveProjectDialog.setLookAndFeel(&customLookAndFeel);
     saveProjectDialog.addTextEditor("newProjectName", "");
     saveProjectDialog.addButton("Cancel", 0);
     saveProjectDialog.addButton("Save", 1);
@@ -223,14 +249,17 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(1200, 900);
+    setSize(1040, 675);
+
 }
 
 MainComponent::~MainComponent()
 {
     deviceManager.removeChangeListener(this);
     setLookAndFeel(nullptr);
-    
+    unsavedProgressWarning.setLookAndFeel(nullptr);
+    saveProjectDialog.setLookAndFeel(nullptr);
+    audioSetupComp->setLookAndFeel(nullptr);
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -328,6 +357,7 @@ void MainComponent::resized()
     auto leftColumnWidth = 280;
     auto titleArea = rect.removeFromTop(40);
     appTitle.setBounds(titleArea.removeFromLeft(leftColumnWidth).reduced(10));
+    settingsButton.setBounds(titleArea.removeFromRight(100).reduced(0));
 
     int headerHeight = 120;
     auto headerArea = rect.removeFromTop(headerHeight);
@@ -348,8 +378,10 @@ void MainComponent::resized()
     saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
     initializeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
     metronomeButton.setBounds(headerArea.removeFromRight(120).reduced(0, headerHeight * 0.33f));
-    tempoBox.setBounds(headerArea.removeFromRight(40).reduced(0, headerHeight * 0.33f));
-    beatsBox.setBounds(headerArea.removeFromRight(40).reduced(0, headerHeight * 0.33f));
+    int boxWidth = 80;
+    tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.36f));
+    //auto gapBetweenBoxesForLabel = headerArea.removeFromRight(40);
+    beatsBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.36f));
 
 
 
@@ -389,6 +421,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
                     i->setDisplayFullThumbnail(true);
                     i->recordButton.setButtonText("Record");
                     i->recordButton.setEnabled(true);
+                    i->setShouldLightUp(false);
                 }
 
             }
@@ -496,10 +529,9 @@ void MainComponent::initializeButtonClicked()
     //creates a warning here that will abort this function if they hit Cancel
     if (unsavedChanges)
     {
-        auto okCancelSelection = unsavedProgressWarning.showOkCancelBox(juce::AlertWindow::AlertIconType::WarningIcon, "Unsaved Progress Warning",
-            "You will lose any unsaved progress.  Continue?",
-            "Ok", "Cancel", nullptr);
-        if (okCancelSelection == 0)
+        auto result = unsavedProgressWarning.runModalLoop();
+        unsavedProgressWarning.setVisible(false);
+        if (result == 0)
         {
             return;
         }
@@ -515,6 +547,25 @@ void MainComponent::initializeButtonClicked()
         track->initializeTrackState();
     }
     unsavedChanges = false;
+}
+
+void MainComponent::settingsButtonClicked()
+{
+    //DN: set up settings window
+    settingsWindow.content.setNonOwned(audioSetupComp.get());
+
+    settingsWindow.content->setSize(600, 400);
+    settingsWindow.content->setColour(juce::ComboBox::backgroundColourId, MAIN_BACKGROUND_COLOR);
+    settingsWindow.content->setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
+    settingsWindow.content->setColour(juce::ComboBox::textColourId, MAIN_DRAW_COLOR);
+    settingsWindow.dialogTitle = "Settings";
+    settingsWindow.dialogBackgroundColour = MAIN_BACKGROUND_COLOR;
+    settingsWindow.escapeKeyTriggersCloseButton = true;
+    settingsWindow.useNativeTitleBar = true;
+    settingsWindow.resizable = false;
+
+    settingsWindow.runModal();
+
 }
 
 void MainComponent::metronomeButtonClicked()
@@ -534,10 +585,9 @@ void MainComponent::savedLoopSelected()
     //creates a warning here that will reset the dropdown and abort this function if they hit Cancel
     if (savedLoopsDropdown.getSelectedId() != 0 && unsavedChanges)
     {
-        auto okCancelSelection = unsavedProgressWarning.showOkCancelBox(juce::AlertWindow::AlertIconType::WarningIcon,"Unsaved Progress Warning",
-            "You will lose any unsaved progress.  Continue?",
-            "Ok", "Cancel", nullptr);
-        if (okCancelSelection == 0)
+        auto result = unsavedProgressWarning.runModalLoop();
+        unsavedProgressWarning.setVisible(false);
+        if (result == 0)
         {
             savedLoopsDropdown.setSelectedId(currentProjectListID,juce::dontSendNotification);
             return;
@@ -661,6 +711,7 @@ void MainComponent::changeState(TransportState newState)
         case Starting: 
             metronome.reset();
             playButton.setEnabled(false);
+            playButton.setOutline(juce::Colours::limegreen, PLAY_STOP_LINE_THICKNESS);
             savedLoopsDropdown.setEnabled(false);
             saveButton.setEnabled(false);
             initializeButton.setEnabled(false);
@@ -674,7 +725,8 @@ void MainComponent::changeState(TransportState newState)
             stopButton.setEnabled(true);
             break;
 
-        case Stopping:     
+        case Stopping:
+            playButton.setOutline(MAIN_DRAW_COLOR, PLAY_STOP_LINE_THICKNESS);
             metronome.stop();
             for (auto& track : tracksArray)
             {

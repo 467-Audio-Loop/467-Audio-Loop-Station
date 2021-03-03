@@ -13,6 +13,7 @@
 
 #define THICK_LINE 5.0f
 #define THIN_LINE 2.0f
+#define PLAY_STOP_LINE_THICKNESS 9
 #define ROUNDED_CORNER_SIZE 8.0f
 #define MAIN_BACKGROUND_COLOR juce::Colours::white
 #define MAIN_DRAW_COLOR juce::Colours::black
@@ -23,6 +24,10 @@ class CustomLookAndFeel : public juce::LookAndFeel_V4
 public:
     CustomLookAndFeel()
     {
+        setColour(juce::TextEditor::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::AlertWindow::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::AlertWindow::textColourId, MAIN_DRAW_COLOR);
         setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
         setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
         setColour(juce::TextButton::textColourOnId, MAIN_DRAW_COLOR);
@@ -68,11 +73,124 @@ public:
         g.strokePath(path, juce::PathStrokeType(2.0f));
     }
 
+    void drawTextEditorOutline(juce::Graphics& g, int width, int height, juce::TextEditor& textEditor)
+    {
+        if (dynamic_cast<juce::AlertWindow*> (textEditor.getParentComponent()) == nullptr)
+        {
+            if (textEditor.isEnabled())
+            {
+                if (textEditor.hasKeyboardFocus(true) && !textEditor.isReadOnly())
+                {
+                    //g.setColour(textEditor.findColour(juce::TextEditor::focusedOutlineColourId));
+                    g.setColour(MAIN_DRAW_COLOR);
+                    //g.drawRect(0, 0, width, height, 2);
+                    juce::Rectangle<int> boxBounds(0, 0, width, height);
+                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+                }
+                else
+                {
+                    //g.setColour(textEditor.findColour(juce::TextEditor::outlineColourId));
+                    //g.drawRect(0, 0, width, height);
+
+                    g.setColour(MAIN_DRAW_COLOR);
+                    juce::Rectangle<int> boxBounds(0, 0, width, height);
+                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+                }
+            }
+        }
+    }
+
 
     juce::Font titleFont{ 26, 1 };
 private:
 
  
+};
+
+class SettingsLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    SettingsLookAndFeel()
+    {
+        setColour(juce::TextEditor::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::AlertWindow::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::AlertWindow::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
+        setColour(juce::TextButton::textColourOnId, MAIN_DRAW_COLOR);
+        setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
+        setColour(juce::ComboBox::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
+        setColour(juce::ComboBox::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::PopupMenu::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::PopupMenu::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::Label::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::Label::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::ListBox::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::ListBox::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::ListBox::outlineColourId, MAIN_DRAW_COLOR);
+    }
+
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& /*backgroundColour*/,
+        bool /*isMouseOverButton*/, bool /*isButtonDown*/)
+    {
+        g.setColour(MAIN_DRAW_COLOR);
+        const juce::Rectangle<float> area(button.getLocalBounds().toFloat());
+        g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
+    }
+
+    void drawComboBox(juce::Graphics& g, int width, int height, bool,
+        int, int, int, int, juce::ComboBox& box)
+    {
+        //auto cornerSize = box.findParentComponentOfClass<juce::ChoicePropertyComponent>() != nullptr ? 0.0f : 3.0f;
+        juce::Rectangle<int> boxBounds(0, 0, width, height);
+
+        g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
+        g.fillRoundedRectangle(boxBounds.toFloat(), ROUNDED_CORNER_SIZE);
+
+        g.setColour(box.findColour(juce::ComboBox::outlineColourId));
+        g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+
+        juce::Rectangle<int> arrowZone(width - 30, 0, 20, height);
+        juce::Path path;
+        path.startNewSubPath((float)arrowZone.getX() + 3.0f, (float)arrowZone.getCentreY() - 2.0f);
+        path.lineTo((float)arrowZone.getCentreX(), (float)arrowZone.getCentreY() + 3.0f);
+        path.lineTo((float)arrowZone.getRight() - 3.0f, (float)arrowZone.getCentreY() - 2.0f);
+
+        g.setColour(box.findColour(juce::ComboBox::arrowColourId).withAlpha((box.isEnabled() ? 0.9f : 0.2f)));
+        g.strokePath(path, juce::PathStrokeType(2.0f));
+    }
+
+
+    void drawTickBox(juce::Graphics& g, juce::Component& component,
+        float x, float y, float w, float h,
+        const bool ticked,
+        const bool isEnabled,
+        const bool shouldDrawButtonAsHighlighted,
+        const bool shouldDrawButtonAsDown)
+    {
+        juce::ignoreUnused(isEnabled, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+
+        juce::Rectangle<float> tickBounds(x, y, w, h);
+
+        //g.setColour(component.findColour(juce::ToggleButton::tickDisabledColourId));
+        g.setColour(SECONDARY_DRAW_COLOR);
+        g.drawRoundedRectangle(tickBounds, 4.0f, 1.0f);
+
+        if (ticked)
+        {
+            //g.setColour(component.findColour(juce::ToggleButton::tickColourId));
+            g.setColour(MAIN_DRAW_COLOR);
+            auto tick = getTickShape(0.75f);
+            g.fillPath(tick, tick.getTransformToScaleToFit(tickBounds.reduced(4, 5).toFloat(), false));
+        }
+    }
+
+
+private:
+
+
 };
 
 
@@ -99,7 +217,7 @@ public:
             juce::Rectangle<float> stopRect(diameter, diameter);
             path.addRoundedRectangle(stopRect, cornerRadius);
             setShape(path, 1, 1, 0);
-            setOutline(MAIN_DRAW_COLOR, 10);
+            setOutline(MAIN_DRAW_COLOR, PLAY_STOP_LINE_THICKNESS);
         }
             break;
         case Play:
@@ -110,7 +228,7 @@ public:
             path.addTriangle(point1, point2, point3);
             path = path.createPathWithRoundedCorners(cornerRadius);
             setShape(path, 1, 1, 0);
-            setOutline(MAIN_DRAW_COLOR, 10);
+            setOutline(MAIN_DRAW_COLOR, PLAY_STOP_LINE_THICKNESS);
         }
             break;
         case Record:
@@ -123,7 +241,6 @@ public:
 
 
     }
-
 
 private:
     TransportButtonRole buttonRole;

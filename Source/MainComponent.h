@@ -31,9 +31,7 @@ public:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 
-    //==============================================================================
-    // AF: Metronome
-    void metronomeButtonClicked();
+
 
     //==============================================================================
     // AF: Text Box Listeners
@@ -59,6 +57,8 @@ private:
     void stopButtonClicked();
     void saveButtonClicked();
     void initializeButtonClicked();
+    void settingsButtonClicked();
+    void metronomeButtonClicked();
     void savedLoopSelected();
 
     bool keyPressed(const juce::KeyPress& key,
@@ -77,8 +77,8 @@ private:
 
     //==============================================================================
 
-    juce::AudioDeviceSelectorComponent audioSetupComp;
-
+    std::unique_ptr<juce::AudioDeviceSelectorComponent> audioSetupComp;
+    juce::DialogWindow::LaunchOptions settingsWindow;
 
     //Header
     juce::Label appTitle{ "appTitle" ,"L O O P S P A C E"};
@@ -92,12 +92,14 @@ private:
     DirectoryTree savedLoopDirTree;
     juce::TextButton saveButton{ "SAVE" };
     juce::TextButton initializeButton{ "NEW" };
+    juce::TextButton settingsButton{ "SETTINGS" };
     juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
 
     CustomLookAndFeel customLookAndFeel;
+    SettingsLookAndFeel settingsLF;
 
 
     juce::OwnedArray<AudioTrack> tracksArray;

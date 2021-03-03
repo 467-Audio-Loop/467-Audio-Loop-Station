@@ -244,7 +244,10 @@ public:
     {
         auto thumbnailBorder = 8;
         g.fillAll(MAIN_BACKGROUND_COLOR);
-        g.setColour(MAIN_DRAW_COLOR);
+        if (shouldLightUp)
+            g.setColour(juce::Colours::red);
+        else
+            g.setColour(MAIN_DRAW_COLOR);
         const juce::Rectangle<float> area(getLocalBounds().reduced(thumbnailBorder).toFloat());
         g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
 
@@ -398,6 +401,11 @@ public:
         return loopSource.isPlaying();
     }
 
+    void setShouldLightUp(bool shouldThisLightUp)
+    {
+        shouldLightUp = shouldThisLightUp;
+    }
+
     // DN:  set position in samples now, not seconds anymore (made it an int, not a double)
     void setPosition(juce::int64 newPosition)
     {
@@ -469,7 +477,15 @@ public:
         else
         {
             //if the lastRecording object doesn't exist, we want to reset the loopSource to be blank
-            auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(2, 0);
+            auto loopBuffer = std::make_unique<juce::AudioBuffer<float>>(1, loopSource.getMasterLoopLength());
+            for (int channel = 0; channel < loopBuffer->getNumChannels(); ++channel)
+            {
+                auto writer = loopBuffer->getWritePointer(channel, 0);
+                for (int i = 0; i < loopBuffer->getNumSamples(); ++i)
+                    writer[i] = 0;  //DN: zero out to avoid pops/clicks
+            }
+
+                
 
             redrawThumbnailWithBuffer(loopBuffer.get());
 
@@ -622,6 +638,7 @@ public:
     juce::Slider slipController;
     juce::Slider gainSlider;
     double gainSliderValue = 1.0;
+    
 
     //juce::TextButton recordButton{ "Record" };
     TransportButton recordButton{ "recordButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Record };
@@ -641,6 +658,7 @@ private:
     int sampleRate = 44100;
     bool aboutToOverflow = false;
     bool isReversed = false;
+    bool shouldLightUp = false;
     juce::int64 dragStart = 0;
 
     AudioRecorder recorder{ thumbnail };
