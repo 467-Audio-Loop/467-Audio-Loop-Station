@@ -46,8 +46,12 @@ public:
     void drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& /*backgroundColour*/,
         bool /*isMouseOverButton*/, bool /*isButtonDown*/)
     {
-        g.setColour(MAIN_DRAW_COLOR);
         const juce::Rectangle<float> area(button.getLocalBounds().reduced(8).toFloat());
+        g.setColour(button.findColour(juce::TextButton::buttonColourId));
+        g.fillRoundedRectangle(area, ROUNDED_CORNER_SIZE);
+            
+        g.setColour(MAIN_DRAW_COLOR);
+
         g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
     }
 

@@ -55,7 +55,10 @@ public:
 
                 if (auto writer = wavFormat.createWriterFor(fileStream.get(), sampleRate, inputChannels, 16, {}, 0))
                 {
-                    fileStream.release(); // (passes responsibility for deleting the stream to the writer object that is now using it)
+
+                    if (writer->getNumChannels() != 0)
+                    {
+                                            fileStream.release(); // (passes responsibility for deleting the stream to the writer object that is now using it)
 
                     // Now we'll create one of these helper objects which will act as a FIFO buffer, and will
                     // write the data to disk on our background thread.
@@ -68,6 +71,8 @@ public:
                     // And now, swap over our active writer pointer so that the audio callback will start using it..
                     const juce::ScopedLock sl(writerLock);
                     activeWriter = threadedWriter.get();
+                    }
+
                 }
             }
         }
@@ -351,17 +356,11 @@ public:
             return;
         }
 
-        // AF: This essentially halts this code until loopSource is ready to record (pos == 0)
-        while (!loopSource.readyToRecord())
-        {
-            continue;
-        }
-
         loopSource.setBeginningOfFile(false);
 
         //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
         loopSource.startRecording(); 
-       
+
         recorder.startRecording(lastRecording);
 
         setDisplayFullThumbnail(false);
@@ -370,7 +369,8 @@ public:
     void stopRecording()
     {
         recorder.stop();
-
+        waitingToRecord = false;
+        loopSource.setBeginningOfFile(false);
        
         auto file = lastRecording;
         auto reader = formatManager.createReaderFor(file);
@@ -420,6 +420,7 @@ public:
     void stop()
     {
         loopSource.stop();
+        //loopSource.setBeginningOfFile(false);
     }
 
     //Call this for all tracks to keep them in sync
@@ -444,6 +445,11 @@ public:
     void setLastRecording(juce::File file)
     {
         lastRecording = file;
+    }
+
+    void setWaitingToRecord(bool isWaitingToRecord)
+    {
+        waitingToRecord = isWaitingToRecord;
     }
 
     //similar to stopRecording, call this after setAsLastRecording to load audio from disk into memory and redraw thumbnail
@@ -640,12 +646,38 @@ public:
     double gainSliderValue = 1.0;
     
 
+
     //juce::TextButton recordButton{ "Record" };
     TransportButton recordButton{ "recordButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Record };
 private:
 
     void timerCallback()
     {
+
+        if (waitingToRecord && loopSource.readyToRecord())
+        {
+           startRecording();
+            waitingToRecord = false;
+        }
+
+        if (waitingToRecord)
+        {
+            blinkingCounter++;
+            if (blinkingCounter == 50)
+                blinkingCounter = 0;
+
+            if (blinkingCounter > 25)
+                shouldLightUp = false;
+            else
+                shouldLightUp = true;
+
+        }
+        else if (isRecording())
+            shouldLightUp = true;
+        else
+            shouldLightUp = false;
+
+
         repaint();
     }
 
@@ -659,7 +691,9 @@ private:
     bool aboutToOverflow = false;
     bool isReversed = false;
     bool shouldLightUp = false;
+    bool waitingToRecord = false;
     juce::int64 dragStart = 0;
+    int blinkingCounter = 0;
 
     AudioRecorder recorder{ thumbnail };
     LoopSource loopSource;

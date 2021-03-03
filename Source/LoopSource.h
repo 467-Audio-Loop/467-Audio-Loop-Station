@@ -148,6 +148,7 @@ public:
     {
         const juce::ScopedLock sl(callbackLock);
         
+        auto hitLoopEnd = false;
 
         bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
 
@@ -173,7 +174,9 @@ public:
                         // AF: Update position only at last iteration of the outer loop
                         // to prevent channels for being out of sync
                         if (i == maxOutChannels - 1)
-                            position = 0;
+                        {
+                            hitLoopEnd = true;
+                        }
                     }
 
                     //DN:  we only want to read the fileBuffer to output if it's not currently being recorded over,
@@ -186,10 +189,12 @@ public:
                 }
             }
 
+
+
             // Check for beginning of file
-            if (position == 0)
+            if (hitLoopEnd)
                 beginningOfFile = true;
-            else
+            else if (position > sampleRate)  //DN: delay of 1 second where flag will stay true
                 beginningOfFile = false;
 
             position = pos;
@@ -197,6 +202,7 @@ public:
 
             if (!playing)
             {
+                beginningOfFile = false;
                 // DN: someone hit "stop", so fade out the last block we just filled
                 for (int i = bufferToFill.buffer->getNumChannels(); --i >= 0;)
                     bufferToFill.buffer->applyGainRamp(i, bufferToFill.startSample, juce::jmin(256, bufferToFill.numSamples), 1.0f, 0.0f);
@@ -257,7 +263,7 @@ private:
     double sampleRate = 44100.0;
 
     // AF: Flag to set when it's ready to record
-    bool beginningOfFile = true;
+    bool beginningOfFile = false;
 
     juce::CriticalSection callbackLock;
 

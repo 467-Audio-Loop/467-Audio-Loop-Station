@@ -78,10 +78,10 @@ public:
             }
         }
 
-        if (pMetronomeSample->getNextReadPosition() != 0 && state == Playing)
+      /* if (pMetronomeSample->getNextReadPosition() != 0 && state == Playing)
         {
-            pMetronomeSample->getNextAudioBlock(bufferToFill);
-        }      
+           pMetronomeSample->getNextAudioBlock(bufferToFill);
+        }    */  
     }
 
     // AF: Getter

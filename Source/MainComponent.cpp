@@ -38,7 +38,7 @@ MainComponent::MainComponent()
     tempoBoxLabel.setJustificationType(juce::Justification::centred);
     tempoBoxLabel.attachToComponent(&tempoBox, false);
     addAndMakeVisible(&beatsBox);
-    beatsBox.setText("16");
+    beatsBox.setText("8");
     beatsBox.setJustification(juce::Justification::centred);
     beatsBox.setInputRestrictions(2, "0123456789");
     beatsBox.addListener(this);
@@ -103,7 +103,7 @@ MainComponent::MainComponent()
 
                 //inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
 
-                track->setShouldLightUp(false);
+               // track->setShouldLightUp(false);
                 //track->recordButton.setButtonText("Record");
 
                 // AF: Enable other track "Record" buttons
@@ -123,42 +123,50 @@ MainComponent::MainComponent()
                     changeState(Starting);
                 }
 
-                //inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
-                if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+                //DN: this prevents the exception that happens if you don't have any audio card set up
+                if (deviceManager.getCurrentAudioDevice())
                 {
-                    SafePointer<MainComponent> safeThis(this);
+                    //inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
 
-                    juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
-                        [safeThis, &track](bool granted) mutable
-                        {
-                            if (granted)
+                    if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
+                    {
+                        SafePointer<MainComponent> safeThis(this);
+
+                        juce::RuntimePermissions::request(juce::RuntimePermissions::writeExternalStorage,
+                            [safeThis, &track](bool granted) mutable
                             {
-                                for (auto& i : safeThis->tracksArray)
+                                if (granted)
                                 {
-                                    if (&i != &track)
-                                        i->startRecording();
+                                    for (auto& i : safeThis->tracksArray)
+                                    {
+                                        if (&i != &track)
+                                            i->startRecording();
+                                    }
                                 }
-                            }                               
-                        });
-                    return;
+                            });
+                        return;
+                    }
+
+                    //track->recordButton.setButtonText("Stop");
+                   // track->setShouldLightUp(true);
+
+                    //AF: Make other record buttons greyed out
+                    // AF: Enable other track "Record" buttons
+                    for (auto& otherTrack : tracksArray)
+                    {
+                        if (&otherTrack != &track)
+                            otherTrack->recordButton.setEnabled(false);
+                    }
+
+                    //track->startRecording();
+                    metronome.setState(Metronome::Playing);
+                    
+                    track->setWaitingToRecord(true);
+                    track->slipController.setValue(0);
+
+                    unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
                 }
 
-                //track->recordButton.setButtonText("Stop");
-                track->setShouldLightUp(true);
-
-                //AF: Make other record buttons greyed out
-                // AF: Enable other track "Record" buttons
-                for (auto& otherTrack : tracksArray)
-                {
-                    if (&otherTrack != &track)
-                        otherTrack->recordButton.setEnabled(false);
-                }
-
-                track->startRecording();
-                track->slipController.setValue(0);
-
-                unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
             }
         };
     }
@@ -421,7 +429,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
                     i->setDisplayFullThumbnail(true);
                     i->recordButton.setButtonText("Record");
                     i->recordButton.setEnabled(true);
-                    i->setShouldLightUp(false);
+                    //i->setShouldLightUp(false);
                 }
 
             }
@@ -449,6 +457,7 @@ void MainComponent::stopButtonClicked()
     // AF: Stop tracks if stop button is clicked
     for (auto& track : tracksArray)
     {
+        track->setWaitingToRecord(false);
         if (track->isRecording())
         {
             track->stopRecording();
@@ -573,10 +582,15 @@ void MainComponent::metronomeButtonClicked()
     if (metronome.getState() == Metronome::Stopped)
     {
         metronome.start();
+        metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_DRAW_COLOR);
+        //metronomeButton.setColour(juce::TextButton::textColourOnId, MAIN_BACKGROUND_COLOR);
+        metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_BACKGROUND_COLOR);
     }
     else if (metronome.getState() == Metronome::Playing) 
     {
         metronome.stop();
+        metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
+        metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
     }
 }
 
@@ -696,7 +710,8 @@ void MainComponent::changeState(TransportState newState)
 
         switch (state)
         {
-        case Stopped:                           
+        case Stopped:  
+            settingsButton.setEnabled(true);
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
             savedLoopsDropdown.setEnabled(true);
@@ -710,6 +725,7 @@ void MainComponent::changeState(TransportState newState)
 
         case Starting: 
             metronome.reset();
+            settingsButton.setEnabled(false);
             playButton.setEnabled(false);
             playButton.setOutline(juce::Colours::limegreen, PLAY_STOP_LINE_THICKNESS);
             savedLoopsDropdown.setEnabled(false);
