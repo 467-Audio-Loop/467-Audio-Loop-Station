@@ -4,6 +4,24 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
   <MAINGROUP id="Zaz6JM" name="467AudioLoopStation">
     <GROUP id="{9BFC0E40-AAAC-86F9-39A1-F0CDF85FA472}" name="Source">
+      <GROUP id="{81726906-98A5-6933-DDCE-EED18C67502D}" name="UI">
+        <FILE id="VtjRoI" name="fad-metronome.svg" compile="0" resource="1"
+              file="Assets/UI/fad-metronome.svg"/>
+        <FILE id="xohCfj" name="cog-solid.svg" compile="0" resource="1" file="Assets/UI/cog-solid.svg"/>
+        <FILE id="sr8IhH" name="fad-play.svg" compile="0" resource="1" file="Assets/UI/fad-play.svg"/>
+        <FILE id="hJyMgx" name="fad-repeat.svg" compile="0" resource="1" file="Assets/UI/fad-repeat.svg"/>
+        <FILE id="QLFOcE" name="fad-save.svg" compile="0" resource="1" file="Assets/UI/fad-save.svg"/>
+        <FILE id="xe7hl9" name="fad-record.svg" compile="0" resource="1" file="Assets/UI/fad-record.svg"/>
+        <FILE id="gje6vo" name="line-w-arrows.svg" compile="0" resource="1"
+              file="Assets/UI/line-w-arrows.svg"/>
+        <FILE id="cLCKJQ" name="fad-arrows-vert.svg" compile="0" resource="1"
+              file="Assets/UI/fad-arrows-vert.svg"/>
+        <FILE id="HBTTPY" name="fad-stop.svg" compile="0" resource="1" file="Assets/UI/fad-stop.svg"/>
+        <FILE id="uDgenS" name="plus-solid.svg" compile="0" resource="1" file="Assets/UI/plus-solid.svg"/>
+        <FILE id="Km0Z5w" name="arrows-alt-h-solid.svg" compile="0" resource="1"
+              file="Assets/UI/arrows-alt-h-solid.svg"/>
+      </GROUP>
+      <FILE id="wndLPh" name="MOTUclick.wav" compile="0" resource="1" file="Assets/MOTUclick.wav"/>
       <FILE id="T3qTBQ" name="Metronome.h" compile="0" resource="0" file="Source/Metronome.h"/>
       <FILE id="agGedb" name="customUI.h" compile="0" resource="0" file="Source/customUI.h"/>
       <FILE id="C3Ijnz" name="SaveLoad.h" compile="0" resource="0" file="Source/SaveLoad.h"/>

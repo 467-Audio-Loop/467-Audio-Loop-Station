@@ -12,12 +12,16 @@
 #pragma once
 
 #define THICK_LINE 5.0f
-#define THIN_LINE 2.0f
-#define PLAY_STOP_LINE_THICKNESS 9
+#define THIN_LINE 3.0f
+#define PLAY_STOP_LINE_THICKNESS 8
 #define ROUNDED_CORNER_SIZE 8.0f
 #define MAIN_BACKGROUND_COLOR juce::Colours::white
 #define MAIN_DRAW_COLOR juce::Colours::black
 #define SECONDARY_DRAW_COLOR juce::Colours::grey
+#define GAP_FOR_OUTLINE 1.2f
+#define METRONOME_ON_COLOR juce::Colours::limegreen
+#define EDITOR_FONT juce::Font(14.0f,juce::Font::bold)
+#define LABEL_FONT juce::Font(14.0f,juce::Font::bold)
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -25,7 +29,11 @@ public:
     CustomLookAndFeel()
     {
         setColour(juce::TextEditor::backgroundColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::TextEditor::outlineColourId, MAIN_DRAW_COLOR);
         setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
+        setColour(juce::TextEditor::highlightedTextColourId, MAIN_BACKGROUND_COLOR);
+        setColour(juce::TextEditor::highlightColourId, MAIN_DRAW_COLOR);
+        setColour(juce::TextEditor::focusedOutlineColourId, MAIN_DRAW_COLOR);
         setColour(juce::AlertWindow::backgroundColourId, MAIN_BACKGROUND_COLOR);
         setColour(juce::AlertWindow::textColourId, MAIN_DRAW_COLOR);
         setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
@@ -65,7 +73,7 @@ public:
         g.fillRoundedRectangle(boxBounds.toFloat(), ROUNDED_CORNER_SIZE);
 
         g.setColour(box.findColour(juce::ComboBox::outlineColourId));
-        g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+        g.drawRoundedRectangle(boxBounds.toFloat().reduced(GAP_FOR_OUTLINE, GAP_FOR_OUTLINE), ROUNDED_CORNER_SIZE, THIN_LINE);
 
         juce::Rectangle<int> arrowZone(width - 30, 0, 20, height);
         juce::Path path;
@@ -83,23 +91,30 @@ public:
         {
             if (textEditor.isEnabled())
             {
+                setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
+                textEditor.setText(textEditor.getText()); //DN:refreshes the color
+                
                 if (textEditor.hasKeyboardFocus(true) && !textEditor.isReadOnly())
                 {
-                    //g.setColour(textEditor.findColour(juce::TextEditor::focusedOutlineColourId));
-                    g.setColour(MAIN_DRAW_COLOR);
+                    g.setColour(textEditor.findColour(juce::TextEditor::focusedOutlineColourId));
                     //g.drawRect(0, 0, width, height, 2);
                     juce::Rectangle<int> boxBounds(0, 0, width, height);
-                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(GAP_FOR_OUTLINE), ROUNDED_CORNER_SIZE, THIN_LINE);
                 }
                 else
                 {
-                    //g.setColour(textEditor.findColour(juce::TextEditor::outlineColourId));
-                    //g.drawRect(0, 0, width, height);
-
-                    g.setColour(MAIN_DRAW_COLOR);
+                    g.setColour(textEditor.findColour(juce::TextEditor::outlineColourId));
                     juce::Rectangle<int> boxBounds(0, 0, width, height);
-                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+                    g.drawRoundedRectangle(boxBounds.toFloat().reduced(GAP_FOR_OUTLINE), ROUNDED_CORNER_SIZE, THIN_LINE);
                 }
+            }
+            else
+            {
+                setColour(juce::TextEditor::textColourId, SECONDARY_DRAW_COLOR);
+                textEditor.setText(textEditor.getText()); //DN:refreshes the color
+                g.setColour(SECONDARY_DRAW_COLOR);
+                juce::Rectangle<int> boxBounds(0, 0, width, height);
+                g.drawRoundedRectangle(boxBounds.toFloat().reduced(GAP_FOR_OUTLINE), ROUNDED_CORNER_SIZE, THIN_LINE);
             }
         }
     }
@@ -140,7 +155,7 @@ public:
         bool /*isMouseOverButton*/, bool /*isButtonDown*/)
     {
         g.setColour(MAIN_DRAW_COLOR);
-        const juce::Rectangle<float> area(button.getLocalBounds().toFloat());
+        const juce::Rectangle<float> area(button.getLocalBounds().reduced(1).toFloat());
         g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
     }
 
@@ -154,7 +169,7 @@ public:
         g.fillRoundedRectangle(boxBounds.toFloat(), ROUNDED_CORNER_SIZE);
 
         g.setColour(box.findColour(juce::ComboBox::outlineColourId));
-        g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), ROUNDED_CORNER_SIZE, THIN_LINE);
+        g.drawRoundedRectangle(boxBounds.toFloat().reduced(GAP_FOR_OUTLINE), ROUNDED_CORNER_SIZE, THIN_LINE);
 
         juce::Rectangle<int> arrowZone(width - 30, 0, 20, height);
         juce::Path path;
@@ -228,7 +243,7 @@ public:
         {
             juce::Point<float> point1(0.0f, 0.0f);
             juce::Point<float> point2(0.0f, diameter);
-            juce::Point<float> point3(diameter, diameter/2);
+            juce::Point<float> point3(diameter*0.93f, diameter/2);
             path.addTriangle(point1, point2, point3);
             path = path.createPathWithRoundedCorners(cornerRadius);
             setShape(path, 1, 1, 0);
@@ -239,7 +254,7 @@ public:
             juce::Rectangle<float> rect(diameter, diameter);
             path.addEllipse(rect);
             setShape(path, 1, 1, 0);
-            setOutline(MAIN_DRAW_COLOR, 19);
+            setOutline(MAIN_DRAW_COLOR, 15);
             break;
         }
 
@@ -250,4 +265,75 @@ private:
     TransportButtonRole buttonRole;
     float cornerRadius = 0.5;
     float diameter = 8.0f;
+};
+
+
+
+class LoopLengthButton : public juce::DrawableButton
+{
+public:
+    // AF: enum for choosing stop play or record
+
+
+    LoopLengthButton(const juce::String& buttonName,
+        ButtonStyle buttonStyle) : juce::DrawableButton(buttonName,buttonStyle)
+    {
+
+    }
+
+    void mouseEnter(const juce::MouseEvent& event)
+    {
+        if (isEnabled())
+            setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+
+
+    void mouseExit(const juce::MouseEvent& event)
+    {
+        if (isEnabled())
+            setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+
+    void mouseDown(const juce::MouseEvent& event)
+    {
+        oldBeats = beatsBox->getText().getIntValue();
+    }
+
+    void mouseDrag(const juce::MouseEvent& event)
+    {
+        if (isEnabled())
+        {
+            int distance = event.getDistanceFromDragStartX();
+            DBG("distance = " + juce::String(distance));
+            int difference = distance / 35;
+            newBeats = oldBeats + difference;
+            if (newBeats < 1)
+                newBeats = 1;
+            if (newBeats > 32)
+                newBeats = 32;
+
+            DBG("new beats = " + juce::String(newBeats));
+            beatsBox->setText(juce::String(newBeats), true);
+        }
+
+    }
+
+    void mouseUp(const juce::MouseEvent& event)
+    {
+
+    }
+
+    void setBeatsBox(juce::TextEditor* newBeatsBox)
+    {
+        beatsBox = newBeatsBox;
+    }
+
+
+private:
+    int oldBeats = 8;
+    int newBeats = 8;
+    juce::TextEditor* beatsBox;
+
+    bool shouldDrawButtonAsDown = false;
+    juce::BorderSize<int> border;
 };

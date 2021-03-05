@@ -2,6 +2,7 @@
 
 #include "AudioTrack.h"
 #include "Metronome.h"
+#include "BinaryData.h"
 
 
 
@@ -37,6 +38,7 @@ public:
     // AF: Text Box Listeners
     void textEditorReturnKeyPressed(juce::TextEditor &textEditor) override;
     void textEditorFocusLost(juce::TextEditor &textEditor) override;
+    void textEditorTextChanged(juce::TextEditor& textEditor) override;
 
 private:
 
@@ -83,20 +85,42 @@ private:
     //Header
     juce::Label appTitle{ "appTitle" ,"L O O P S P A C E"};
     // Global controls
-    //juce::TextButton playButton{ "Play" };
-    //juce::TextButton stopButton{ "Stop" };
+
+    //std::unique_ptr<juce::Drawable> stopSVG;
+    //juce::DrawableButton stopButton{ "stopButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
     TransportButton stopButton{ "stopButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Stop };
     TransportButton playButton{ "playButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Play };
+    
+    //std::unique_ptr<juce::Drawable> playSVG;
+    //juce::DrawableButton playButton{ "playButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+    
     //juce::Label savedLoopsLabel{ "savedLoopLabel","Current Project File" };
     juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
     DirectoryTree savedLoopDirTree;
-    juce::TextButton saveButton{ "SAVE" };
-    juce::TextButton initializeButton{ "NEW" };
-    juce::TextButton settingsButton{ "SETTINGS" };
+
+
+    std::unique_ptr<juce::Drawable> saveSVG;
+    juce::DrawableButton saveButton{ "saveButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+    std::unique_ptr<juce::Drawable> initializeSVG;
+    juce::DrawableButton plusIcon{ "plusIcon",juce::DrawableButton::ButtonStyle::ImageFitted };
+    std::unique_ptr<juce::Drawable> plusSVG;
+    juce::DrawableButton initializeButton{ "initializeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+    std::unique_ptr<juce::Drawable> settingsSVG;
+    juce::DrawableButton settingsButton{ "settingsButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+    //juce::TextButton saveButton{ "SAVE" };
+    //juce::TextButton initializeButton{ "NEW" };
+   // juce::TextButton settingsButton{ "SETTINGS" };
+
+    std::unique_ptr<juce::Drawable> loopLengthSVG;
+    LoopLengthButton loopLengthButton{ "loopLengthButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
     juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
+
+    bool settingsHaveBeenOpened = false; //DN: set to true once someone hits settings
 
     CustomLookAndFeel customLookAndFeel;
     SettingsLookAndFeel settingsLF;
@@ -111,7 +135,10 @@ private:
     InputMonitor inputAudio;
 
     Metronome metronome;
-    juce::TextButton metronomeButton{ "METRONOME" };
+    //juce::TextButton metronomeButton{ "METRONOME" };
+    std::unique_ptr<juce::Drawable> metronomeSVG;
+    juce::DrawableButton metronomeButton{ "metronomeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
 
     juce::TextEditor tempoBox;
     juce::Label tempoBoxLabel;

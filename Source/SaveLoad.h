@@ -13,10 +13,10 @@
 #pragma once
 
 
-#define MASTER_FOLDER_NAME "467Audio"
+#define MASTER_FOLDER_NAME "Loopspace"
 #define SAVED_LOOPS_FOLDER_NAME "Saved Loops"
 #define TEMP_LOOP_FOLDER_NAME "Temp WAVs"
-#define TRACK_FILENAME "LoopstationTrack"
+#define TRACK_FILENAME "LoopspaceTrack"
 #define NUM_TRACKS  4
 #define PROJECT_STATE_XML_FILENAME "projectState.xml"
 

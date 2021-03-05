@@ -107,6 +107,9 @@ public:
         auto activeInputChannels = device->getActiveInputChannels();
         inputChannels = activeInputChannels.countNumberOfSetBits();
 
+        if (!settingsHaveBeenOpened && inputChannels > 1)
+            inputChannels = 1;
+
         // AF: Get number of output channels
         auto activeOutputChannels = device->getActiveOutputChannels();
         outputChannels = activeOutputChannels.countNumberOfSetBits();
@@ -148,6 +151,8 @@ public:
     {
         return outputChannels;
     }
+
+    bool settingsHaveBeenOpened = false;
 
 private:
     juce::AudioThumbnail& thumbnail;
@@ -204,6 +209,7 @@ public:
         reverseButton.addListener(this);
 
         startTimer(10); //used for vertical line position marker
+
     }
 
 
@@ -222,6 +228,8 @@ public:
         int numOutputChannels,
         int numSamples) override
     {
+        if (!settingsHaveBeenOpened && numInputChannels > 1)
+            numInputChannels = 1;
         recorder.audioDeviceIOCallback(inputChannelData, numInputChannels,outputChannelData, numOutputChannels,numSamples);
     }
 
@@ -427,6 +435,7 @@ public:
     void setMasterLoop(int tempo, int measures)
     {
         loopSource.setMasterLoop(tempo, measures);
+        repaint();
     }
 
     // AF: Same function from LoopSource.h in order to access it from MainComponent.cpp
@@ -635,20 +644,32 @@ public:
         repaint();
     }
 
+    void setSettingsHaveBeenOpened(bool newValue)
+    {
+        settingsHaveBeenOpened = newValue;
+        recorder.settingsHaveBeenOpened = newValue;
+    }
+
     // AF: Slider for panning
     juce::Slider panSlider;
     juce::Label panLabel;
     double panSliderValue = 0.0;
 
-    juce::TextButton reverseButton{ "Reverse" };
+    //juce::TextButton reverseButton{ "Reverse" };
+    std::unique_ptr<juce::Drawable> reverseSVG;// = juce::Drawable::createFromSVG(*svg_xml_1); // GET THIS AS DRAWABLE
+    juce::DrawableButton reverseButton{ "reverseButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
+
     juce::Slider slipController;
     juce::Slider gainSlider;
     double gainSliderValue = 1.0;
-    
+
 
 
     //juce::TextButton recordButton{ "Record" };
     TransportButton recordButton{ "recordButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Record };
+
+
 private:
 
     void timerCallback()
@@ -692,6 +713,7 @@ private:
     bool isReversed = false;
     bool shouldLightUp = false;
     bool waitingToRecord = false;
+    bool settingsHaveBeenOpened = false;
     juce::int64 dragStart = 0;
     int blinkingCounter = 0;
 

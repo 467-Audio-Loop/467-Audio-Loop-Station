@@ -19,6 +19,9 @@ MainComponent::MainComponent()
         false);
     audioSetupComp->setLookAndFeel(&settingsLF);
 
+    //juce::AudioDeviceManager::AudioDeviceSetup setup;
+
+    
 
     //addAndMakeVisible(audioSetupComp);
 
@@ -28,24 +31,35 @@ MainComponent::MainComponent()
     setLookAndFeel(&customLookAndFeel);
 
     // AF: Tempo and beats control
+    tempoBox.setFont(EDITOR_FONT);
     addAndMakeVisible(&tempoBox);
     tempoBox.setText("120");
     tempoBox.setInputRestrictions(3, "0123456789");
     tempoBox.setJustification(juce::Justification::centred);
+    tempoBox.setSelectAllWhenFocused(true);
     tempoBox.addListener(this);
     addAndMakeVisible(&tempoBoxLabel);
+    tempoBoxLabel.setFont(LABEL_FONT);
     tempoBoxLabel.setText("TEMPO", juce::dontSendNotification);
     tempoBoxLabel.setJustificationType(juce::Justification::centred);
     tempoBoxLabel.attachToComponent(&tempoBox, false);
+    beatsBox.setFont(EDITOR_FONT);
     addAndMakeVisible(&beatsBox);
     beatsBox.setText("8");
     beatsBox.setJustification(juce::Justification::centred);
     beatsBox.setInputRestrictions(2, "0123456789");
+    beatsBox.setSelectAllWhenFocused(true);
     beatsBox.addListener(this);
     addAndMakeVisible(&beatsBoxLabel);
     beatsBoxLabel.setText("BEATS", juce::dontSendNotification);
     beatsBoxLabel.setJustificationType(juce::Justification::centred);
     beatsBoxLabel.attachToComponent(&beatsBox, false);
+    beatsBoxLabel.setFont(LABEL_FONT);
+
+
+    //tell the loopLength drag controller button about beatsBox
+    auto boxPtr = &beatsBox;
+    loopLengthButton.setBeatsBox(boxPtr);
 
     // AF: Metronome
     mixer.addInputSource(&metronome, false);
@@ -73,6 +87,11 @@ MainComponent::MainComponent()
         addAndMakeVisible(track->gainSlider);
         track->gainSlider.setNumDecimalPlacesToDisplay(2);
 
+        //DN: set up icons
+        std::unique_ptr<juce::XmlElement> reverse_svg_xml(juce::XmlDocument::parse(BinaryData::fadrepeat_svg)); // GET THE SVG AS A XML
+        track->reverseSVG = juce::Drawable::createFromSVG(*reverse_svg_xml.get()); // GET THIS AS DRAWABLE
+        track->reverseButton.setImages(track->reverseSVG.get());
+
         // DN: Show reverse buttons and slip controllers
         addAndMakeVisible(track->reverseButton);
        // addAndMakeVisible(track->slipController);
@@ -95,6 +114,12 @@ MainComponent::MainComponent()
         track->recordButton.onClick = [this, &track]
         {
             tempoBox.setReadOnly(true);
+            tempoBox.setEnabled(false);
+            tempoBox.setColour(juce::TextEditor::textColourId, SECONDARY_DRAW_COLOR);
+            auto text = tempoBox.getText();
+            tempoBox.clear();
+            tempoBox.setText(text);
+            tempoBoxLabel.setColour(juce::Label::textColourId, SECONDARY_DRAW_COLOR);
 
             if (track->isRecording())
             {
@@ -183,6 +208,35 @@ MainComponent::MainComponent()
     appTitle.setJustificationType(juce::Justification::centred);
     appTitle.setFont(customLookAndFeel.titleFont);
 
+    //DN: set up icons
+    std::unique_ptr<juce::XmlElement> settings_svg_xml(juce::XmlDocument::parse(BinaryData::cogsolid_svg)); // GET THE SVG AS A XML
+    settingsSVG = juce::Drawable::createFromSVG(*settings_svg_xml.get()); // GET THIS AS DRAWABLE
+    settingsButton.setImages(settingsSVG.get());
+
+    std::unique_ptr<juce::XmlElement> save_svg_xml(juce::XmlDocument::parse(BinaryData::fadsave_svg)); // GET THE SVG AS A XML
+    saveSVG = juce::Drawable::createFromSVG(*save_svg_xml.get()); // GET THIS AS DRAWABLE
+    saveButton.setImages(saveSVG.get());
+
+    std::unique_ptr<juce::XmlElement> initialize_svg_xml(juce::XmlDocument::parse(BinaryData::fadsave_svg)); // GET THE SVG AS A XML
+    initializeSVG = juce::Drawable::createFromSVG(*initialize_svg_xml.get()); // GET THIS AS DRAWABLE
+    initializeButton.setImages(initializeSVG.get());
+
+    std::unique_ptr<juce::XmlElement> plus_svg_xml(juce::XmlDocument::parse(BinaryData::plussolid_svg)); // GET THE SVG AS A XML
+    plusSVG = juce::Drawable::createFromSVG(*plus_svg_xml.get()); // GET THIS AS DRAWABLE
+    plusIcon.setImages(plusSVG.get());
+
+    std::unique_ptr<juce::XmlElement> metronome_svg_xml(juce::XmlDocument::parse(BinaryData::fadmetronome_svg)); // GET THE SVG AS A XML
+    metronomeSVG = juce::Drawable::createFromSVG(*metronome_svg_xml.get()); // GET THIS AS DRAWABLE
+    metronomeButton.setImages(metronomeSVG.get());
+
+    std::unique_ptr<juce::XmlElement> loopLength_svg_xml(juce::XmlDocument::parse(BinaryData::linewarrows_svg)); // GET THE SVG AS A XML
+    loopLengthSVG = juce::Drawable::createFromSVG(*loopLength_svg_xml.get()); // GET THIS AS DRAWABLE
+    loopLengthButton.setImages(loopLengthSVG.get());
+
+
+
+    
+
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
     playButton.onClick = [this] { playButtonClicked(); };
@@ -200,6 +254,7 @@ MainComponent::MainComponent()
     addAndMakeVisible(&savedLoopsDropdown);
     addAndMakeVisible(&saveButton);
     addAndMakeVisible(&initializeButton);
+    addAndMakeVisible(&plusIcon,-1);
     addAndMakeVisible(&settingsButton);
 
     saveButton.onClick = [this] { saveButtonClicked(); };
@@ -209,16 +264,21 @@ MainComponent::MainComponent()
     initializeButton.onClick = [this] { initializeButtonClicked(); };
     initializeButton.setEnabled(true);
 
+    plusIcon.onClick = [this] {initializeButtonClicked(); }; //DN: plus icon is part of the init button
+    plusIcon.setEnabled(true);
+
     settingsButton.onClick = [this] { settingsButtonClicked(); };
     settingsButton.setEnabled(true);
 
+    addAndMakeVisible(&loopLengthButton);
 
+    loopLengthButton.onClick = [this] {textEditorReturnKeyPressed(beatsBox); };
 
     //DN:  set up the dropdown that lets you load previously saved projects
     //DN: set first item index offset to 1, 0 will be when no project is selected
     savedLoopsDropdown.addItemList(savedLoopDirTree.getLoopFolderNamesArray(),1); 
     savedLoopsDropdown.setJustificationType(juce::Justification::centred);
-    savedLoopsDropdown.setTextWhenNothingSelected("NO PROJECT LOADED");
+    savedLoopsDropdown.setTextWhenNothingSelected("  NO PROJECT LOADED");
     savedLoopsDropdown.setTextWhenNoChoicesAvailable("NO PROJECTS FOUND");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
 
@@ -254,10 +314,9 @@ MainComponent::MainComponent()
     saveProjectDialog.addButton("Cancel", 0);
     saveProjectDialog.addButton("Save", 1);
 
-
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(1040, 675);
+    setSize(990, 700);
 
 }
 
@@ -296,6 +355,11 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     auto activeInputChannels = device->getActiveInputChannels();
     auto activeOutputChannels = device->getActiveOutputChannels();
     auto maxInputChannels = activeInputChannels.countNumberOfSetBits();
+
+    //DN: force input to be 1 channel only initially
+    if (!settingsHaveBeenOpened && maxInputChannels > 1)
+        maxInputChannels = 1;
+        
     auto maxOutputChannels = activeOutputChannels.countNumberOfSetBits();
     auto test = device->getInputChannelNames();
 
@@ -352,7 +416,9 @@ void MainComponent::paint (juce::Graphics& g)
     // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     // You can add your drawing code here!
-    g.fillAll(juce::Colours::white);
+    g.fillAll(MAIN_BACKGROUND_COLOR);
+
+
 
 }
 
@@ -361,11 +427,13 @@ void MainComponent::resized()
     // This is called when the MainContentComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
-    auto rect = getLocalBounds().reduced(10);
-    auto leftColumnWidth = 280;
+
+    auto mainFullOuterBorder = 10;
+    auto rect = getLocalBounds().reduced(mainFullOuterBorder);
+    auto leftColumnWidth = 260;
     auto titleArea = rect.removeFromTop(40);
     appTitle.setBounds(titleArea.removeFromLeft(leftColumnWidth).reduced(10));
-    settingsButton.setBounds(titleArea.removeFromRight(100).reduced(0));
+    settingsButton.setBounds(titleArea.removeFromRight(50).reduced(2));
 
     int headerHeight = 120;
     auto headerArea = rect.removeFromTop(headerHeight);
@@ -383,24 +451,30 @@ void MainComponent::resized()
     savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(8,headerHeight*0.33f));
     int saveClearButtonsWidth = 60;
 
-    saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
-    initializeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(0, headerHeight*0.33f));
-    metronomeButton.setBounds(headerArea.removeFromRight(120).reduced(0, headerHeight * 0.33f));
+    saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight*0.33f));
+    auto initializeButtonBounds = headerArea.removeFromRight(saveClearButtonsWidth);
+    initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.33f));
+    plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.2f).removeFromTop(40).removeFromRight(saveClearButtonsWidth/3.3));
+    metronomeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.33f));
     int boxWidth = 80;
-    tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.36f));
-    //auto gapBetweenBoxesForLabel = headerArea.removeFromRight(40);
-    beatsBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.36f));
+    auto cutSliverAboveTempoBeats = headerArea.removeFromTop(5);
+    tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
+    //auto gapBetweenBoxes = headerArea.removeFromRight(5);
+    beatsBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
 
+    rect.expand(mainFullOuterBorder,mainFullOuterBorder);
+    auto loopControllerRow = rect.removeFromTop(25);
+    loopLengthButton.setBounds(loopControllerRow.removeFromRight(50));
 
-
+    rect.reduce(mainFullOuterBorder,mainFullOuterBorder);
     for (auto& track : tracksArray)
     {
         auto trackArea = rect.removeFromTop(120);
         auto trackControlsL = trackArea.removeFromLeft(200);
         track->recordButton.setBounds(trackControlsL.removeFromLeft(80).reduced(6));
         track->panSlider.setBounds(trackControlsL.removeFromLeft(60));
-        track->gainSlider.setBounds(trackControlsL.removeFromLeft(60));
-        auto trackControlsR = trackArea.removeFromLeft(80);
+        track->gainSlider.setBounds(trackControlsL.removeFromLeft(60).reduced(10,0));
+        auto trackControlsR = trackArea.removeFromLeft(leftColumnWidth-200);
         trackControlsR.reduce(0, 40);
         track->reverseButton.setBounds(trackControlsR);
        // track->slipController.setBounds(trackArea.removeFromBottom(20));
@@ -429,7 +503,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
                     i->setDisplayFullThumbnail(true);
                     i->recordButton.setButtonText("Record");
                     i->recordButton.setEnabled(true);
-                    //i->setShouldLightUp(false);
+                    i->setShouldLightUp(false);
                 }
 
             }
@@ -517,6 +591,8 @@ void MainComponent::saveButtonClicked()
 
     // create an outer node
     juce::XmlElement projectState("projectState");
+    projectState.setAttribute("tempo", tempoBox.getText().getIntValue());
+    projectState.setAttribute("beats", beatsBox.getText().getIntValue());
 
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
@@ -551,6 +627,12 @@ void MainComponent::initializeButtonClicked()
     initializeTempWAVs();
     redrawAndBufferAudio();
     tempoBox.setReadOnly(false);
+    tempoBox.setEnabled(true);
+    tempoBox.setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
+    auto text = tempoBox.getText();
+    tempoBox.clear();
+    tempoBox.setText(text);
+    tempoBoxLabel.setColour(juce::Label::textColourId, MAIN_DRAW_COLOR);
     for (auto& track : tracksArray)
     {
         track->initializeTrackState();
@@ -560,6 +642,11 @@ void MainComponent::initializeButtonClicked()
 
 void MainComponent::settingsButtonClicked()
 {
+    settingsHaveBeenOpened = true;
+    for (auto& track : tracksArray)
+    {
+        track->setSettingsHaveBeenOpened(true);
+    }
     //DN: set up settings window
     settingsWindow.content.setNonOwned(audioSetupComp.get());
 
@@ -582,15 +669,19 @@ void MainComponent::metronomeButtonClicked()
     if (metronome.getState() == Metronome::Stopped)
     {
         metronome.start();
-        metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_DRAW_COLOR);
-        //metronomeButton.setColour(juce::TextButton::textColourOnId, MAIN_BACKGROUND_COLOR);
-        metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_BACKGROUND_COLOR);
+        //metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_DRAW_COLOR);
+       // metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_BACKGROUND_COLOR);
+
+        metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
+        metronomeButton.setImages(metronomeSVG.get());
     }
     else if (metronome.getState() == Metronome::Playing) 
     {
         metronome.stop();
-        metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
-        metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
+       // metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
+       // metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
+        metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
+        metronomeButton.setImages(metronomeSVG.get());
     }
 }
 
@@ -625,9 +716,15 @@ void MainComponent::savedLoopSelected()
     auto projectFolder = savedLoopDirTree.getProjectFolder(savedLoopFolderName);
     juce::XmlDocument projectStateDoc(juce::File(projectFolder.getChildFile(PROJECT_STATE_XML_FILENAME)));
 
+
     //DN: can only try to acces the result of this if the file exists
     if (auto projectState = projectStateDoc.getDocumentElement())
     {
+        //DN: restore global project settings
+        tempoBox.setText(juce::String(projectState->getIntAttribute("tempo")));
+        beatsBox.setText(juce::String(projectState->getIntAttribute("beats")));
+
+
         //iterate through xml and restore the state of each track
         for (int i = 0; i < NUM_TRACKS; ++i)
         {
@@ -637,6 +734,8 @@ void MainComponent::savedLoopSelected()
                 if (trackState->hasTagName(trackName))
                     tracksArray[i]->restoreTrackState(trackState);
             }
+
+            tracksArray[i]->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
         }
     }
 
@@ -712,11 +811,13 @@ void MainComponent::changeState(TransportState newState)
         {
         case Stopped:  
             settingsButton.setEnabled(true);
+            loopLengthButton.setEnabled(true);
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
             savedLoopsDropdown.setEnabled(true);
             saveButton.setEnabled(true);
             initializeButton.setEnabled(true);
+            plusIcon.setEnabled(true);
             for (auto& track : tracksArray)
             {
                 track->setPosition(0);
@@ -726,11 +827,13 @@ void MainComponent::changeState(TransportState newState)
         case Starting: 
             metronome.reset();
             settingsButton.setEnabled(false);
+            loopLengthButton.setEnabled(false);
             playButton.setEnabled(false);
             playButton.setOutline(juce::Colours::limegreen, PLAY_STOP_LINE_THICKNESS);
             savedLoopsDropdown.setEnabled(false);
             saveButton.setEnabled(false);
             initializeButton.setEnabled(false);
+            plusIcon.setEnabled(false);
             for (auto& track : tracksArray)
             {
                 track->start();
@@ -769,6 +872,8 @@ void MainComponent::textEditorReturnKeyPressed(juce::TextEditor &textEditor)
         for (auto& track : tracksArray)
             track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
     }
+
+    juce::Component::unfocusAllComponents();
 }
 void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
 {
@@ -777,8 +882,29 @@ void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
         metronome.setBpm(textEditor.getText().getIntValue());
         for (auto& track : tracksArray)
             track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+
+        //DN: only way to un-highlight when you click away
+        int oldValue = tempoBox.getText().getIntValue();
+        tempoBox.clear();
+        tempoBox.setText(juce::String(oldValue));
     }
 
+    if (&textEditor == &beatsBox)
+    {
+        for (auto& track : tracksArray)
+            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+        
+        //DN: only way to un-highlight when you click away
+        int oldValue = beatsBox.getText().getIntValue();
+        beatsBox.clear();
+        beatsBox.setText(juce::String(oldValue));
+    }
+
+    juce::Component::unfocusAllComponents();
+}
+
+void MainComponent::textEditorTextChanged(juce::TextEditor& textEditor)
+{
     if (&textEditor == &beatsBox)
     {
         for (auto& track : tracksArray)

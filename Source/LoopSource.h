@@ -121,6 +121,7 @@ public:
 
     void stop()
     {
+        beginningOfFile = false;
         if (playing)
         {
             playing = false;
@@ -194,7 +195,7 @@ public:
             // Check for beginning of file
             if (hitLoopEnd)
                 beginningOfFile = true;
-            else if (position > sampleRate)  //DN: delay of 1 second where flag will stay true
+            else if (position > (sampleRate/3))  //DN: delay where flag will stay true
                 beginningOfFile = false;
 
             position = pos;
