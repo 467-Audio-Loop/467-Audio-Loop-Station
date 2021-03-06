@@ -456,9 +456,14 @@ public:
         lastRecording = file;
     }
 
-    void setWaitingToRecord(bool isWaitingToRecord)
+    void setWaitingToRecord(bool newWaitingToRecord)
     {
-        waitingToRecord = isWaitingToRecord;
+        waitingToRecord = newWaitingToRecord;
+    }
+
+    bool isWaitingToRecord()
+    {
+        return waitingToRecord;
     }
 
     //similar to stopRecording, call this after setAsLastRecording to load audio from disk into memory and redraw thumbnail

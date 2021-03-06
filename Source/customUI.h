@@ -28,7 +28,6 @@ class CustomLookAndFeel : public juce::LookAndFeel_V4
 public:
     CustomLookAndFeel()
     {
-
         setColour(juce::TextEditor::backgroundColourId, MAIN_BACKGROUND_COLOR);
         setColour(juce::TextEditor::outlineColourId, MAIN_DRAW_COLOR);
         setColour(juce::TextEditor::textColourId, MAIN_DRAW_COLOR);
@@ -84,6 +83,15 @@ public:
 
         g.setColour(box.findColour(juce::ComboBox::arrowColourId).withAlpha((box.isEnabled() ? 0.9f : 0.2f)));
         g.strokePath(path, juce::PathStrokeType(2.0f));
+    }
+
+    void positionComboBoxText(juce::ComboBox& box, juce::Label& label)
+    {
+        label.setBounds(1, 1,
+            box.getWidth(),
+            box.getHeight() - 2);
+
+        label.setFont(getComboBoxFont(box));
     }
 
     void drawTextEditorOutline(juce::Graphics& g, int width, int height, juce::TextEditor& textEditor)
@@ -188,15 +196,21 @@ public:
                 g.setColour(MAIN_DRAW_COLOR);
                 //g.fillEllipse(juce::Rectangle<float>(static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre(isThreeVal ? thumbPoint : maxPoint));
                 
-                auto knobArea = juce::Rectangle<float>(static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre(isThreeVal ? thumbPoint : maxPoint);
+                juce::Rectangle<float> knobArea;
                 //g.fillRoundedRectangle(knobArea.getTopLeft().getX(),knobArea.getTopLeft.getY(),knobArea.getWidth(),knobArea.getHeight());
-               // if (slider.isHorizontal())
-                    knobArea.expand(2, 2);
-                //else
-                    //knobArea.expand(8, 4);
-                g.fillRect(knobArea);
+                if (slider.isHorizontal())
+                {
+                    knobArea = juce::Rectangle<float>(static_cast<float> (thumbWidth*1.4), static_cast<float> (thumbWidth*1.4)).withCentre(isThreeVal ? thumbPoint : maxPoint);
+                }
+                else
+                {
+                    knobArea = juce::Rectangle<float>(static_cast<float> (thumbWidth*1.4), static_cast<float> (thumbWidth*1.85)).withCentre(isThreeVal ? thumbPoint : maxPoint);
+                }
+      
+                g.fillRoundedRectangle(knobArea.getTopLeft().getX(),knobArea.getTopLeft().getY(),knobArea.getWidth(),knobArea.getHeight(),2);
                 g.setColour(MAIN_BACKGROUND_COLOR);
-                g.fillRect(knobArea.reduced(4));
+                knobArea.reduce(thumbWidth*0.3,thumbWidth*0.3);
+                g.fillRoundedRectangle(knobArea.getTopLeft().getX(), knobArea.getTopLeft().getY(), knobArea.getWidth(), knobArea.getHeight(), 2);
             }
 
             if (isTwoVal || isThreeVal)
@@ -227,6 +241,93 @@ public:
         }
     }
 
+    void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+        const bool isSeparator, const bool isActive,
+        const bool isHighlighted, const bool isTicked,
+        const bool hasSubMenu, const juce::String& text,
+        const juce::String& shortcutKeyText,
+        const juce::Drawable* icon, const juce::Colour* const textColourToUse)
+    {
+        if (isSeparator)
+        {
+            auto r = area.reduced(5, 0);
+            r.removeFromTop(juce::roundToInt(((float)r.getHeight() * 0.5f) - 0.5f));
+
+            g.setColour(findColour(juce::PopupMenu::textColourId).withAlpha(0.3f));
+            g.fillRect(r.removeFromTop(1));
+        }
+        else
+        {
+            auto textColour = (textColourToUse == nullptr ? findColour(juce::PopupMenu::textColourId)
+                : *textColourToUse);
+
+            auto r = area.reduced(1);
+
+            if (isHighlighted && isActive)
+            {
+                g.setColour(findColour(juce::PopupMenu::highlightedBackgroundColourId));
+                g.fillRect(r);
+
+                g.setColour(findColour(juce::PopupMenu::highlightedTextColourId));
+            }
+            else
+            {
+                g.setColour(textColour.withMultipliedAlpha(isActive ? 1.0f : 0.5f));
+            }
+
+            r.reduce(juce::jmin(5, area.getWidth() / 20), 0);
+
+            auto font = getPopupMenuFont();
+
+            auto maxFontHeight = (float)r.getHeight() / 1.3f;
+
+            if (font.getHeight() > maxFontHeight)
+                font.setHeight(maxFontHeight);
+
+            g.setFont(font);
+
+            auto iconArea = r.removeFromLeft(1.0f);// juce::roundToInt(maxFontHeight)).toFloat();
+
+            if (icon != nullptr)
+            {
+                //icon->drawWithin(g, iconArea, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
+                r.removeFromLeft(juce::roundToInt(maxFontHeight * 0.5f));
+            }
+            else if (isTicked)
+            {
+                auto tick = getTickShape(1.0f);
+                g.fillPath(tick, tick.getTransformToScaleToFit(iconArea.reduced(iconArea.getWidth() / 5, 0).toFloat(), true));
+            }
+
+            if (hasSubMenu)
+            {
+                auto arrowH = 0.6f * getPopupMenuFont().getAscent();
+
+                auto x = static_cast<float> (r.removeFromRight((int)arrowH).getX());
+                auto halfH = static_cast<float> (r.getCentreY());
+
+                juce::Path path;
+                path.startNewSubPath(x, halfH - arrowH * 0.5f);
+                path.lineTo(x + arrowH * 0.6f, halfH);
+                path.lineTo(x, halfH + arrowH * 0.5f);
+
+                g.strokePath(path, juce::PathStrokeType(2.0f));
+            }
+
+            r.removeFromRight(3);
+            g.drawFittedText(text, r, juce::Justification::centred, 1);
+
+            if (shortcutKeyText.isNotEmpty())
+            {
+                auto f2 = font;
+                f2.setHeight(f2.getHeight() * 0.75f);
+                f2.setHorizontalScale(0.95f);
+                g.setFont(f2);
+
+                g.drawText(shortcutKeyText, r, juce::Justification::centredRight, true);
+            }
+        }
+    }
 
     juce::Font titleFont{ 26, 1 };
 private:
@@ -412,7 +513,7 @@ public:
         if (isEnabled())
         {
             int distance = event.getDistanceFromDragStartX();
-            DBG("distance = " + juce::String(distance));
+           // DBG("distance = " + juce::String(distance));
             int difference = distance / 35;
             newBeats = oldBeats + difference;
             if (newBeats < 1)
@@ -420,7 +521,7 @@ public:
             if (newBeats > 32)
                 newBeats = 32;
 
-            DBG("new beats = " + juce::String(newBeats));
+           // DBG("new beats = " + juce::String(newBeats));
             beatsBox->setText(juce::String(newBeats), true);
         }
 

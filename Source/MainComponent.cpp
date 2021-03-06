@@ -142,6 +142,9 @@ MainComponent::MainComponent()
             }
             else
             {
+                metronome.setState(Metronome::Playing);
+                metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
+
                 // AF: Begin playback when user clicks record if it's not already playing
                 if (state == Stopped)
                 {
@@ -182,9 +185,6 @@ MainComponent::MainComponent()
                         if (&otherTrack != &track)
                             otherTrack->recordButton.setEnabled(false);
                     }
-
-                    //track->startRecording();
-                    metronome.setState(Metronome::Playing);
                     
                     track->setWaitingToRecord(true);
                     track->slipController.setValue(0);
@@ -278,6 +278,7 @@ MainComponent::MainComponent()
     //DN: set first item index offset to 1, 0 will be when no project is selected
     savedLoopsDropdown.addItemList(savedLoopDirTree.getLoopFolderNamesArray(),1); 
     savedLoopsDropdown.setJustificationType(juce::Justification::centred);
+
     savedLoopsDropdown.setTextWhenNothingSelected("  NO PROJECT LOADED");
     savedLoopsDropdown.setTextWhenNoChoicesAvailable("NO PROJECTS FOUND");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
@@ -316,7 +317,7 @@ MainComponent::MainComponent()
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(990, 700);
+    setSize(975, 700);
 
 }
 
@@ -428,7 +429,7 @@ void MainComponent::resized()
     // If you add any child components, this is where you should
     // update their positions.
 
-    auto mainFullOuterBorder = 10;
+    auto mainFullOuterBorder = 13;
     auto rect = getLocalBounds().reduced(mainFullOuterBorder);
     auto leftColumnWidth = 260;
     auto titleArea = rect.removeFromTop(40);
@@ -451,11 +452,13 @@ void MainComponent::resized()
     savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(8,headerHeight*0.33f));
     int saveClearButtonsWidth = 60;
 
-    saveButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight*0.33f));
+    auto saveButtonArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.35f);
+    saveButton.setBounds(saveButtonArea); //.removeFromBottom(saveButtonArea.getHeight() * .97));
     auto initializeButtonBounds = headerArea.removeFromRight(saveClearButtonsWidth);
-    initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.33f));
-    plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.2f).removeFromTop(40).removeFromRight(saveClearButtonsWidth/3.3));
-    metronomeButton.setBounds(headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.33f));
+    initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.35f));
+    plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.21f).removeFromTop(42).removeFromRight(saveClearButtonsWidth/3.1).removeFromLeft(20));
+    auto metronomeArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.33f);
+    metronomeButton.setBounds(metronomeArea.removeFromTop(metronomeArea.getHeight()*0.98));
     int boxWidth = 80;
     auto cutSliverAboveTempoBeats = headerArea.removeFromTop(5);
     tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
@@ -464,18 +467,18 @@ void MainComponent::resized()
 
     rect.expand(mainFullOuterBorder,mainFullOuterBorder);
     auto loopControllerRow = rect.removeFromTop(25);
-    loopLengthButton.setBounds(loopControllerRow.removeFromRight(50));
+    loopLengthButton.setBounds(loopControllerRow.removeFromRight(46));
 
     rect.reduce(mainFullOuterBorder,mainFullOuterBorder);
     for (auto& track : tracksArray)
     {
         auto trackArea = rect.removeFromTop(120);
         auto trackControlsL = trackArea.removeFromLeft(200);
-        track->recordButton.setBounds(trackControlsL.removeFromLeft(80).reduced(6));
+        track->recordButton.setBounds(trackControlsL.removeFromLeft(80).reduced(8));
         track->panSlider.setBounds(trackControlsL.removeFromLeft(60));
         track->gainSlider.setBounds(trackControlsL.removeFromLeft(60).reduced(15,0));
         auto trackControlsR = trackArea.removeFromLeft(leftColumnWidth-200);
-        trackControlsR.reduce(0, 40);
+        trackControlsR.reduce(0, 42);
         track->reverseButton.setBounds(trackControlsR);
        // track->slipController.setBounds(trackArea.removeFromBottom(20));
         track->setBounds(trackArea);
@@ -496,12 +499,21 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         if (source == track)
         {
             //DN:  we need this to handle things if recording is cut off automatically
+            //DN: this will also be hit whenever any of the track controls are clicked on 
             if (!trackCurrentlyRecording())
             {
+                //
+                if (metronome.getState() == Metronome::Playing)
+                {
+
+                    metronome.setState(Metronome::Stopped);
+                    metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
+                }
+
                 for (auto& i : tracksArray)
                 {
                     i->setDisplayFullThumbnail(true);
-                    i->recordButton.setButtonText("Record");
+                    //i->recordButton.setButtonText("Record");
                     i->recordButton.setEnabled(true);
                     i->setShouldLightUp(false);
                 }
@@ -549,6 +561,7 @@ void MainComponent::saveButtonClicked()
         auto result = saveProjectDialog.runModalLoop();
         if (result == 1)
         {
+            unsavedChanges = false;
             newFolderName = saveProjectDialog.getTextEditorContents("newProjectName");
             if (newFolderName.length() == 0)
                 saveProjectDialog.addTextBlock("New Project Name Cannot Be Empty");
@@ -559,6 +572,11 @@ void MainComponent::saveButtonClicked()
             }
             savedLoopDirTree.saveWAVsTo(newFolderName);
         }
+        else
+        {
+            saveProjectDialog.setVisible(false);
+            return;
+        }
 
         saveProjectDialog.setVisible(false);
         //DN: the dialog box just goes behind everything until it gets called to the front again
@@ -568,6 +586,7 @@ void MainComponent::saveButtonClicked()
     }
     else
     {
+        unsavedChanges = false;
         newFolderName = savedLoopsDropdown.getText();
         savedLoopDirTree.saveWAVsTo(newFolderName);  //DN: save loop to project folder selected in dropdown
     }
@@ -603,10 +622,6 @@ void MainComponent::saveButtonClicked()
     juce::File destFile = savedLoopDirTree.getProjectFolder(newFolderName).getChildFile(PROJECT_STATE_XML_FILENAME);
     
     projectState.writeTo(destFile);
-
-
-
-    unsavedChanges = false;
 }
 
 void MainComponent::initializeButtonClicked()
@@ -742,6 +757,13 @@ void MainComponent::savedLoopSelected()
     currentProjectListID = savedLoopsDropdown.getSelectedId();
     unsavedChanges = false;
 
+    tempoBox.setEnabled(false);
+    tempoBox.setColour(juce::TextEditor::textColourId, SECONDARY_DRAW_COLOR);
+    auto text = tempoBox.getText();
+    tempoBox.clear();
+    tempoBox.setText(text);
+    tempoBoxLabel.setEnabled(false);
+
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
@@ -795,7 +817,7 @@ bool MainComponent::trackCurrentlyRecording()
 {
     for (auto& track : tracksArray)
     {
-        if (track->isRecording())
+        if (track->isRecording() || track->isWaitingToRecord())
             return true;
     }
     return false;
@@ -883,10 +905,11 @@ void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
         for (auto& track : tracksArray)
             track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
 
-        //DN: only way to un-highlight when you click away
+        //DN: trying to un-highlight when you click away
         int oldValue = tempoBox.getText().getIntValue();
         tempoBox.clear();
         tempoBox.setText(juce::String(oldValue));
+        tempoBox.setHighlightedRegion(juce::Range<int>().withStartAndLength(0,0));
     }
 
     if (&textEditor == &beatsBox)
@@ -898,6 +921,7 @@ void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
         int oldValue = beatsBox.getText().getIntValue();
         beatsBox.clear();
         beatsBox.setText(juce::String(oldValue));
+        beatsBox.setHighlightedRegion(juce::Range<int>().withStartAndLength(0, 0));
     }
 
     juce::Component::unfocusAllComponents();
@@ -905,9 +929,16 @@ void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
 
 void MainComponent::textEditorTextChanged(juce::TextEditor& textEditor)
 {
+
     if (&textEditor == &beatsBox)
     {
+        int newBeats = beatsBox.getText().getIntValue();
+        DBG("textChanged " + juce::String(newBeats));
+        int newTempo = tempoBox.getText().getIntValue();
         for (auto& track : tracksArray)
-            track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
+        {
+            track->setMasterLoop(newTempo, newBeats);
+            track->repaint();
+        }
     }
 }
