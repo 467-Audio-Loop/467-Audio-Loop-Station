@@ -14,6 +14,7 @@
 #define THICK_LINE 5.0f
 #define THIN_LINE 3.0f
 #define PLAY_STOP_LINE_THICKNESS 8
+#define NEW_FILE_LINE_THICKNESS 3
 #define ROUNDED_CORNER_SIZE 8.0f
 #define MAIN_BACKGROUND_COLOR juce::Colours::white
 #define MAIN_DRAW_COLOR juce::Colours::black
@@ -349,7 +350,6 @@ public:
         setColour(juce::TextButton::textColourOnId, MAIN_DRAW_COLOR);
         setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
         setColour(juce::ComboBox::backgroundColourId, MAIN_BACKGROUND_COLOR);
-        setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
         setColour(juce::ComboBox::textColourId, MAIN_DRAW_COLOR);
         setColour(juce::PopupMenu::backgroundColourId, MAIN_BACKGROUND_COLOR);
         setColour(juce::PopupMenu::textColourId, MAIN_DRAW_COLOR);
@@ -425,7 +425,6 @@ private:
 class TransportButton : public juce::ShapeButton
 {
 public:
-    // AF: enum for choosing stop play or record
     enum TransportButtonRole
     {
         Stop,
@@ -466,14 +465,43 @@ public:
             setOutline(MAIN_DRAW_COLOR, 15);
             break;
         }
-
-
     }
 
 private:
     TransportButtonRole buttonRole;
     float cornerRadius = 0.5;
     float diameter = 8.0f;
+};
+
+
+class NewFileButton : public juce::ShapeButton
+{
+public:
+
+    NewFileButton(const juce::String& t, juce::Colour n, juce::Colour o, juce::Colour d)
+        : juce::ShapeButton(t, n, o, d)
+    {
+        juce::Path path;
+        path.startNewSubPath(0,0);
+        juce::Point<float> point1(0.0f, 0.0f);
+        juce::Point<float> point2(8.0f, 0.0f);
+        juce::Point<float> point3(10.2f, 2.0f);
+        juce::Point<float> point4(10.2f, 10.2f);
+        juce::Point<float> point5(0.0f, 10.2f);
+        path.lineTo(point1);
+        path.lineTo(point2);
+        path.lineTo(point3);
+        path.lineTo(point4);
+        path.lineTo(point5);
+        path.lineTo(point1);
+        path = path.createPathWithRoundedCorners(0.5);
+        setShape(path, 1, 1, 0);
+        setOutline(MAIN_DRAW_COLOR, NEW_FILE_LINE_THICKNESS);
+
+    }
+
+private:
+
 };
 
 

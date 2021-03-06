@@ -102,10 +102,12 @@ private:
 
     std::unique_ptr<juce::Drawable> saveSVG;
     juce::DrawableButton saveButton{ "saveButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-    std::unique_ptr<juce::Drawable> initializeSVG;
+    //std::unique_ptr<juce::Drawable> initializeSVG;
+    //juce::DrawableButton initializeButton{ "initializeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+    NewFileButton initializeButton{ "initializeButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR };
     juce::DrawableButton plusIcon{ "plusIcon",juce::DrawableButton::ButtonStyle::ImageFitted };
     std::unique_ptr<juce::Drawable> plusSVG;
-    juce::DrawableButton initializeButton{ "initializeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
     std::unique_ptr<juce::Drawable> settingsSVG;
     juce::DrawableButton settingsButton{ "settingsButton",juce::DrawableButton::ButtonStyle::ImageFitted };
     //juce::TextButton saveButton{ "SAVE" };

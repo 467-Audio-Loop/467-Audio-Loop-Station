@@ -217,9 +217,9 @@ MainComponent::MainComponent()
     saveSVG = juce::Drawable::createFromSVG(*save_svg_xml.get()); // GET THIS AS DRAWABLE
     saveButton.setImages(saveSVG.get());
 
-    std::unique_ptr<juce::XmlElement> initialize_svg_xml(juce::XmlDocument::parse(BinaryData::fadsave_svg)); // GET THE SVG AS A XML
-    initializeSVG = juce::Drawable::createFromSVG(*initialize_svg_xml.get()); // GET THIS AS DRAWABLE
-    initializeButton.setImages(initializeSVG.get());
+    //std::unique_ptr<juce::XmlElement> initialize_svg_xml(juce::XmlDocument::parse(BinaryData::fadsave_svg)); // GET THE SVG AS A XML
+    //initializeSVG = juce::Drawable::createFromSVG(*initialize_svg_xml.get()); // GET THIS AS DRAWABLE
+    //initializeButton.setImages(initializeSVG.get());
 
     std::unique_ptr<juce::XmlElement> plus_svg_xml(juce::XmlDocument::parse(BinaryData::plussolid_svg)); // GET THE SVG AS A XML
     plusSVG = juce::Drawable::createFromSVG(*plus_svg_xml.get()); // GET THIS AS DRAWABLE
@@ -317,7 +317,7 @@ MainComponent::MainComponent()
 
     // Make sure you set the size of the component after
     // you add any child components.
-    setSize(975, 700);
+    setSize(960, 700);
 
 }
 
@@ -431,6 +431,7 @@ void MainComponent::resized()
 
     auto mainFullOuterBorder = 13;
     auto rect = getLocalBounds().reduced(mainFullOuterBorder);
+    auto extraRightMargin = rect.removeFromRight(5);
     auto leftColumnWidth = 260;
     auto titleArea = rect.removeFromTop(40);
     appTitle.setBounds(titleArea.removeFromLeft(leftColumnWidth).reduced(10));
@@ -440,8 +441,8 @@ void MainComponent::resized()
     auto headerArea = rect.removeFromTop(headerHeight);
     //audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
 
-    auto transportButtonArea = headerArea.removeFromLeft(leftColumnWidth);
-    int playStopMargin = 30;
+    auto transportButtonArea = headerArea.removeFromLeft(leftColumnWidth-5);
+    int playStopMargin = 20;
     transportButtonArea.removeFromLeft(playStopMargin);
     transportButtonArea.removeFromRight(playStopMargin);
 
@@ -450,19 +451,20 @@ void MainComponent::resized()
 
 
     savedLoopsDropdown.setBounds(headerArea.removeFromRight(350).reduced(8,headerHeight*0.33f));
-    int saveClearButtonsWidth = 60;
+    int saveClearButtonsWidth = 55;
 
     auto saveButtonArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.35f);
     saveButton.setBounds(saveButtonArea); //.removeFromBottom(saveButtonArea.getHeight() * .97));
     auto initializeButtonBounds = headerArea.removeFromRight(saveClearButtonsWidth);
-    initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.35f));
-    plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.21f).removeFromTop(42).removeFromRight(saveClearButtonsWidth/3.1).removeFromLeft(20));
+    initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.35f).reduced(3));
+   // plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.21f).removeFromTop(42).removeFromRight(saveClearButtonsWidth/3.1).removeFromLeft(20));
+    plusIcon.setBounds(initializeButtonBounds.reduced(17));
     auto metronomeArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.33f);
     metronomeButton.setBounds(metronomeArea.removeFromTop(metronomeArea.getHeight()*0.98));
     int boxWidth = 80;
     auto cutSliverAboveTempoBeats = headerArea.removeFromTop(5);
     tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
-    //auto gapBetweenBoxes = headerArea.removeFromRight(5);
+    //auto gapBetweenBoxes = headerArea.removeFromRight(10);
     beatsBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
 
     rect.expand(mainFullOuterBorder,mainFullOuterBorder);
@@ -837,8 +839,10 @@ void MainComponent::changeState(TransportState newState)
             stopButton.setEnabled(false);
             playButton.setEnabled(true);
             savedLoopsDropdown.setEnabled(true);
+            savedLoopsDropdown.setColour(juce::ComboBox::outlineColourId, MAIN_DRAW_COLOR);
             saveButton.setEnabled(true);
             initializeButton.setEnabled(true);
+            initializeButton.setOutline(MAIN_DRAW_COLOR, NEW_FILE_LINE_THICKNESS);
             plusIcon.setEnabled(true);
             for (auto& track : tracksArray)
             {
@@ -853,8 +857,10 @@ void MainComponent::changeState(TransportState newState)
             playButton.setEnabled(false);
             playButton.setOutline(juce::Colours::limegreen, PLAY_STOP_LINE_THICKNESS);
             savedLoopsDropdown.setEnabled(false);
+            savedLoopsDropdown.setColour(juce::ComboBox::outlineColourId, SECONDARY_DRAW_COLOR);
             saveButton.setEnabled(false);
             initializeButton.setEnabled(false);
+            initializeButton.setOutline(SECONDARY_DRAW_COLOR, NEW_FILE_LINE_THICKNESS);
             plusIcon.setEnabled(false);
             for (auto& track : tracksArray)
             {
