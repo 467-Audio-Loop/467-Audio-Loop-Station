@@ -80,7 +80,7 @@ MainComponent::MainComponent()
     {
         track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
         addAndMakeVisible(track->panSlider);
-        track->panSlider.setNumDecimalPlacesToDisplay(2);
+        //track->panSlider.setNumDecimalPlacesToDisplay(2);
         //track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
         //addAndMakeVisible(track->panLabel);
 
@@ -473,7 +473,7 @@ void MainComponent::resized()
         auto trackControlsL = trackArea.removeFromLeft(200);
         track->recordButton.setBounds(trackControlsL.removeFromLeft(80).reduced(6));
         track->panSlider.setBounds(trackControlsL.removeFromLeft(60));
-        track->gainSlider.setBounds(trackControlsL.removeFromLeft(60).reduced(10,0));
+        track->gainSlider.setBounds(trackControlsL.removeFromLeft(60).reduced(15,0));
         auto trackControlsR = trackArea.removeFromLeft(leftColumnWidth-200);
         trackControlsR.reduce(0, 40);
         track->reverseButton.setBounds(trackControlsR);
