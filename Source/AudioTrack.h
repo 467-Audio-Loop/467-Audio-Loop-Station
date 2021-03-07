@@ -266,12 +266,9 @@ public:
 
         if (thumbnail.getTotalLength() > 0.0)
         {
-            //auto endTime = displayFullThumb ? thumbnail.getTotalLength()
-            //    : juce::jmax(30.0, thumbnail.getTotalLength());
-
             //DN:  paint the thumbnail audio horizontally relative to master loop and the slip offset
             auto startTime = -(double)slipController.getValue() / sampleRate;
-            auto endTime = (double)(loopSource.getMasterLoopLength() / sampleRate) + startTime;
+            auto endTime = ((double)loopSource.getMasterLoopLength() / (double)sampleRate) + (double)startTime;
 
             auto thumbArea = getLocalBounds().reduced(thumbnailBorder);
             
@@ -284,15 +281,7 @@ public:
             auto drawPosition = (audioPosition / loopSource.getMasterLoopLength()) * (float)thumbArea.getWidth() + (float)thumbArea.getX();            
             g.drawLine(drawPosition, (float)thumbArea.getY()+8, drawPosition, (float)thumbArea.getBottom()-8, 2.0f);                       
 
-           // redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
-        else
-        {
-            //g.setFont(14.0f);
-           // g.drawFittedText("(No file recorded)", getLocalBounds(), juce::Justification::centred, 2);
-        }
-
-
     }
 
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override 
@@ -341,6 +330,16 @@ public:
             {
                 panWriter[sample] = panWriter[sample] * gain;
             }
+        }
+
+
+        //DN: this is where we set the bool that will auto-stop recording at the end of the loop
+        if (isRecording() && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
+        {
+            DBG("position = " + juce::String(loopSource.getPosition()));
+            DBG("looplength = " + juce::String(loopSource.getMasterLoopLength()));
+            DBG("SETTING ABOUT TO OVERFLOW");
+            aboutToOverflow = true;
         }
     }
 
@@ -393,9 +392,7 @@ public:
             // DN: send the loopBuffer object to the loopSource which will handle playback, transfer ownership of unique ptr
             loopSource.setBuffer(loopBuffer.release());
             loopSource.stopRecording();
-
         }
-        
     }
 
     // --
@@ -428,7 +425,6 @@ public:
     void stop()
     {
         loopSource.stop();
-        //loopSource.setBeginningOfFile(false);
     }
 
     //Call this for all tracks to keep them in sync
@@ -473,7 +469,6 @@ public:
         auto file = lastRecording;
         auto reader = formatManager.createReaderFor(file);
 
-
         if (reader != nullptr)
         {
             //DN: set up a memory buffer to hold the audio for this loop file
@@ -504,8 +499,6 @@ public:
                 for (int i = 0; i < loopBuffer->getNumSamples(); ++i)
                     writer[i] = 0;  //DN: zero out to avoid pops/clicks
             }
-
-                
 
             redrawThumbnailWithBuffer(loopBuffer.get());
 
@@ -543,15 +536,11 @@ public:
             gainSliderValue = slider->getValue();
         }
 
-
         if (slider == &slipController)
         {
             loopSource.setFileStartOffset(slider->getValue());
             repaint();
         }
-
-
-
     }
 
     /** Called when the button is clicked. */
@@ -563,7 +552,6 @@ public:
 
             //account for slip here?
             redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
-
 
             isReversed = !isReversed;
         }
@@ -610,7 +598,7 @@ public:
         if (isReversed)
         {
             loopSource.reverseAudio();
-            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());             //account for slip here
+            redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
 
     }
@@ -679,6 +667,13 @@ private:
 
     void timerCallback()
     {
+        if (isRecording() && aboutToOverflow)
+        {
+            DBG("CALLING STOP RECORD");
+            stopRecording();
+            aboutToOverflow = false;
+            sendChangeMessage(); //DN: needed to tell mainComponent we're stopping
+        }
 
         if (waitingToRecord && loopSource.readyToRecord())
         {
@@ -703,8 +698,8 @@ private:
         else
             shouldLightUp = false;
 
-
-        repaint();
+        if(loopSource.isPlaying()) //DN: added this if so we don't call this when not playing back
+            repaint();
     }
 
 
@@ -736,20 +731,27 @@ private:
             repaint();
         }
             
+        /* DN: trying new timer way
+        
         if (aboutToOverflow)
         {
+            DBG("STOP RECORDING CALLED");
             stopRecording();
             aboutToOverflow = false;
         }
+
 
         // AF: Stop recording once loop reaches max length
         //if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
         if (source == &thumbnail && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
         {
+            DBG("SETTING ABOUT TO OVERFLOW");
             //stopRecording();
             //repaint();
             aboutToOverflow = true;
         }
+        
+        */
 
         //DN: any time any change happens check if we need to turn on/off slip controller
         if (!lastRecording.exists())
