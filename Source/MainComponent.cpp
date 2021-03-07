@@ -142,9 +142,6 @@ MainComponent::MainComponent()
             }
             else
             {
-                metronome.setState(Metronome::Playing);
-                metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
-
                 // AF: Begin playback when user clicks record if it's not already playing
                 if (state == Stopped)
                 {
@@ -187,7 +184,6 @@ MainComponent::MainComponent()
                     }
                     
                     track->setWaitingToRecord(true);
-                    track->slipController.setValue(0);
 
                     unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
                 }

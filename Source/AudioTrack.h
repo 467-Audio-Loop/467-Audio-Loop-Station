@@ -41,6 +41,7 @@ public:
     //==============================================================================
     void startRecording(const juce::File& file)
     {
+
         stop();
 
         if (sampleRate > 0)
@@ -363,6 +364,8 @@ public:
             return;
         }
 
+        slipController.setValue(0);
+
         loopSource.setBeginningOfFile(false);
 
         //DN:  tell loopSource to play silence/not access loopBuffer while we switch it out
@@ -477,12 +480,6 @@ public:
             reader->read(loopBuffer.get(), 0, reader->lengthInSamples, 0, true, true);
             //DN: need to delete here because the "createReaderFor" method says to - maybe switch to a unique ptr later for "good practice" reasons!
             delete reader;
-
-            //DN: account for reverse
-            if (isReversed)
-            {
-                loopBuffer->reverse(0, loopBuffer->getNumSamples());
-            }
 
             redrawThumbnailWithBuffer(loopBuffer.get());
 
