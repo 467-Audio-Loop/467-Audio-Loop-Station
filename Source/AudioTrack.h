@@ -29,8 +29,6 @@ public:
         : thumbnail(thumbnailToUpdate)
     {
         backgroundThread.startThread();
-        
-
     }
 
     ~AudioRecorder() override
@@ -103,14 +101,12 @@ public:
     {
         sampleRate = device->getCurrentSampleRate();
 
-        // AF: Get number of input channels
         auto activeInputChannels = device->getActiveInputChannels();
         inputChannels = activeInputChannels.countNumberOfSetBits();
 
         if (!settingsHaveBeenOpened && inputChannels > 1)
             inputChannels = 1;
 
-        // AF: Get number of output channels
         auto activeOutputChannels = device->getActiveOutputChannels();
         outputChannels = activeOutputChannels.countNumberOfSetBits();
     }
@@ -135,6 +131,8 @@ public:
             thumbnail.addBlock(nextSampleNum, buffer, 0, numSamples);
             nextSampleNum += numSamples;
         }
+
+        sendChangeMessage();
 
         // We need to clear the output buffers, in case they're full of junk..
         for (int i = 0; i < numOutputChannels; ++i)
@@ -167,10 +165,9 @@ private:
     std::atomic<juce::AudioFormatWriter::ThreadedWriter*> activeWriter{ nullptr };
 };
 
-
 //==============================================================================
-// DN:  I retooled what was the "RecordingThumbail" class, which was just a 
-// Component, into an AudioAppComponent that will handle each track's playback
+// DN: "RecordingThumbail" class retooled, which was just a 
+// component, into an AudioAppComponent that will handle each track's playback
 
 class AudioTrack : public juce::AudioAppComponent,
     private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback,
@@ -190,8 +187,6 @@ public:
         panSlider.addListener(this);
         panSlider.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
         panSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
-       // panLabel.setText("L/R", juce::dontSendNotification);
-        //panLabel.attachToComponent(&panSlider, false);
 
         slipController.addListener(this);
         slipController.setRange(-loopSource.getMasterLoopLength(), loopSource.getMasterLoopLength());
@@ -204,12 +199,10 @@ public:
         gainSlider.setDoubleClickReturnValue(true, 1.0, juce::ModifierKeys::altModifier);
         gainSlider.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         gainSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
-        //gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
 
         reverseButton.addListener(this);
 
         startTimer(10); //used for vertical line position marker
-
     }
 
 
@@ -744,6 +737,7 @@ private:
 
         // AF: Stop recording once loop reaches max length
         //if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
+        DBG("Position: " << loopSource.getPosition() << "     //  loopLength: " << loopSource.getMasterLoopLength());
         if (source == &thumbnail && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
         {
             //stopRecording();
@@ -766,9 +760,6 @@ private:
         sendSynchronousChangeMessage();
     }
 };
-
-
-
 
 //DN:  A simple AudioSource class where we can send the audio input in buffer form, to be read from by our main mixer
 class InputMonitor : public juce::AudioSource

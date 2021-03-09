@@ -16,19 +16,9 @@
 class Metronome : public juce::AudioSource
 {
 public:
-    // AF: Constructor
     Metronome()
     {
         mFormatManager.registerBasicFormats();
-
-        //juce::File myFile{ juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDesktopDirectory) }; // Have to change this to the actual path
-        //auto mySamples = myFile.findChildFiles(juce::File::TypesOfFileToFind::findFiles, true, "metronome_click.wav");
-
-        //jassert(mySamples[0].exists());
-
-        //auto formatReader = mFormatManager.createReaderFor(mySamples[0]);
-
-        //pMetronomeSample.reset(new juce::AudioFormatReaderSource(formatReader, true));
 
         juce::WavAudioFormat wavFormat;
         std::unique_ptr<juce::AudioFormatReader> formatReader(wavFormat.createReaderFor(new juce::MemoryInputStream(

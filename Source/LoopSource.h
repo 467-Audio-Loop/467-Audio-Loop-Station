@@ -200,7 +200,6 @@ public:
 
             position = pos;
 
-
             if (!playing)
             {
                 beginningOfFile = false;
