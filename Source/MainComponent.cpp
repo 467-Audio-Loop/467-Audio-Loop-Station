@@ -142,9 +142,6 @@ MainComponent::MainComponent()
             }
             else
             {
-                metronome.setState(Metronome::Playing);
-                metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
-
                 // AF: Begin playback when user clicks record if it's not already playing
                 if (state == Stopped)
                 {
@@ -187,7 +184,6 @@ MainComponent::MainComponent()
                     }
                     
                     track->setWaitingToRecord(true);
-                    track->slipController.setValue(0);
 
                     unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
                 }
@@ -501,17 +497,10 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         if (source == track)
         {
             //DN:  we need this to handle things if recording is cut off automatically
-            //DN: this will also be hit whenever any of the track controls are clicked on 
+            //DN: this will also be hit whenever any of the track controls are clicked on
+            //DN: and when you initially hit the play button, so be careful what is added here
             if (!trackCurrentlyRecording())
             {
-                //
-                if (metronome.getState() == Metronome::Playing)
-                {
-
-                    metronome.setState(Metronome::Stopped);
-                    metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
-                }
-
                 for (auto& i : tracksArray)
                 {
                     i->setDisplayFullThumbnail(true);
@@ -519,7 +508,6 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
                     i->recordButton.setEnabled(true);
                     i->setShouldLightUp(false);
                 }
-
             }
 
             if (track->isPlaying())
@@ -534,13 +522,11 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 void MainComponent::playButtonClicked()
 {
     changeState(Starting);
-    //inputAudio.setGain(0.0);
 }
 
 void MainComponent::stopButtonClicked()
 {
     changeState(Stopping);
-    //inputAudio.setGain(1.0);
 
     // AF: Stop tracks if stop button is clicked
     for (auto& track : tracksArray)
@@ -609,7 +595,6 @@ void MainComponent::saveButtonClicked()
     }
 
     //DN: save the track states to an xml file in the project folder
-
     // create an outer node
     juce::XmlElement projectState("projectState");
     projectState.setAttribute("tempo", tempoBox.getText().getIntValue());
@@ -686,17 +671,12 @@ void MainComponent::metronomeButtonClicked()
     if (metronome.getState() == Metronome::Stopped)
     {
         metronome.start();
-        //metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_DRAW_COLOR);
-       // metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_BACKGROUND_COLOR);
-
         metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
         metronomeButton.setImages(metronomeSVG.get());
     }
     else if (metronome.getState() == Metronome::Playing) 
     {
         metronome.stop();
-       // metronomeButton.setColour(juce::TextButton::buttonColourId, MAIN_BACKGROUND_COLOR);
-       // metronomeButton.setColour(juce::TextButton::textColourOffId, MAIN_DRAW_COLOR);
         metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
         metronomeButton.setImages(metronomeSVG.get());
     }
@@ -875,6 +855,8 @@ void MainComponent::changeState(TransportState newState)
         case Stopping:
             playButton.setOutline(MAIN_DRAW_COLOR, PLAY_STOP_LINE_THICKNESS);
             metronome.stop();
+            metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
+            metronomeButton.setImages(metronomeSVG.get());
             for (auto& track : tracksArray)
             {
                 track->stop();
@@ -936,13 +918,14 @@ void MainComponent::textEditorFocusLost(juce::TextEditor &textEditor)
 void MainComponent::textEditorTextChanged(juce::TextEditor& textEditor)
 {
 
-    if (&textEditor == &beatsBox)
+    if (&textEditor == &beatsBox && beatsBox.getText().getIntValue() > 1)
     {
         int newBeats = beatsBox.getText().getIntValue();
         DBG("textChanged " + juce::String(newBeats));
         int newTempo = tempoBox.getText().getIntValue();
         for (auto& track : tracksArray)
         {
+            DBG("changing track looplength");
             track->setMasterLoop(newTempo, newBeats);
             track->repaint();
         }
