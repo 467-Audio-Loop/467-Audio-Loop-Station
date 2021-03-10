@@ -16,7 +16,6 @@
 class Metronome : public juce::AudioSource
 {
 public:
-    // AF: Constructor
     Metronome()
     {
         mFormatManager.registerBasicFormats();
