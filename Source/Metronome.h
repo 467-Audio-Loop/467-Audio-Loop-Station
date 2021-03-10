@@ -2,9 +2,9 @@
   ==============================================================================
 
     Metronome.h
-    Created: 1 Mar 2021 11:38:01am
-    Author:  Antonio Florencio
 
+    Class to play a metronome click sample, using provided tempo and synced with
+    the tracks in our loop.
   ==============================================================================
 */
 
@@ -20,15 +20,6 @@ public:
     Metronome()
     {
         mFormatManager.registerBasicFormats();
-
-        //juce::File myFile{ juce::File::getSpecialLocation(juce::File::SpecialLocationType::userDesktopDirectory) }; // Have to change this to the actual path
-        //auto mySamples = myFile.findChildFiles(juce::File::TypesOfFileToFind::findFiles, true, "metronome_click.wav");
-
-        //jassert(mySamples[0].exists());
-
-        //auto formatReader = mFormatManager.createReaderFor(mySamples[0]);
-
-        //pMetronomeSample.reset(new juce::AudioFormatReaderSource(formatReader, true));
 
         juce::WavAudioFormat wavFormat;
         std::unique_ptr<juce::AudioFormatReader> formatReader(wavFormat.createReaderFor(new juce::MemoryInputStream(
@@ -48,7 +39,6 @@ public:
         if (pMetronomeSample != nullptr)
         {
             pMetronomeSample->prepareToPlay(samplesPerBlock, sampleRate);
-            DBG("file loaded");
         }
     }
 
@@ -84,11 +74,6 @@ public:
                 pMetronomeSample->getNextAudioBlock(bufferToFill);
             }
         }
-
-      /* if (pMetronomeSample->getNextReadPosition() != 0 && state == Playing)
-        {
-           pMetronomeSample->getNextAudioBlock(bufferToFill);
-        }    */  
     }
 
     // AF: Getter

@@ -21,6 +21,8 @@
         <FILE id="Km0Z5w" name="arrows-alt-h-solid.svg" compile="0" resource="1"
               file="Assets/UI/arrows-alt-h-solid.svg"/>
       </GROUP>
+      <FILE id="k2FvUC" name="AudioRecorder.h" compile="0" resource="0" file="Source/AudioRecorder.h"/>
+      <FILE id="RtlxvX" name="InputMonitor.h" compile="0" resource="0" file="Source/InputMonitor.h"/>
       <FILE id="wndLPh" name="MOTUclick.wav" compile="0" resource="1" file="Assets/MOTUclick.wav"/>
       <FILE id="T3qTBQ" name="Metronome.h" compile="0" resource="0" file="Source/Metronome.h"/>
       <FILE id="agGedb" name="customUI.h" compile="0" resource="0" file="Source/customUI.h"/>
@@ -28,8 +30,6 @@
       <FILE id="K6VlDv" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="XpPzIC" name="LoopSource.h" compile="0" resource="0" file="Source/LoopSource.h"/>
       <FILE id="P1LioO" name="AudioTrack.h" compile="0" resource="0" file="Source/AudioTrack.h"/>
-      <FILE id="It09TX" name="AudioLiveScrollingDisplay.h" compile="0" resource="0"
-            file="Source/AudioLiveScrollingDisplay.h"/>
       <FILE id="rxNP6v" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="oTMRjM" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>

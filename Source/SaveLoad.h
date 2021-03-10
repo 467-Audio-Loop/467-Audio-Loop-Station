@@ -2,8 +2,6 @@
   ==============================================================================
 
     SaveLoad.h
-    Created: 10 Feb 2021 11:52:00am
-    Author:  dnego
 
     This is where we'll handle creating and navigating the directory structure 
     where we'll save and load our loop files
@@ -45,14 +43,10 @@ public:
         savedLoopsFolder = masterFolder.getChildFile(SAVED_LOOPS_FOLDER_NAME);
         if (!savedLoopsFolder.exists())
             savedLoopsFolder.createDirectory();
-
-        
-
     }
     
     ~DirectoryTree()
     {
-
     }
 
     //DN: We delete the file if in exists in temp loop dir and return
@@ -114,8 +108,7 @@ public:
                 return false;
         }
 
-        return true;
-            
+        return true; 
     }
 
 
@@ -128,7 +121,6 @@ public:
         if (!folderToCopyTo.exists())
         {
             folderToCopyTo.createDirectory();
-
         }
  
         //DN: delete old WAVs to be overwritten
@@ -147,7 +139,6 @@ public:
         }
 
         return true;
-
     }
 
     juce::File getProjectFolder(juce::String folderName)

@@ -8,25 +8,22 @@ MainComponent::MainComponent()
 {
     //DN:: set up audio settings menu
     audioSetupComp = std::make_unique<juce::AudioDeviceSelectorComponent>(
-        deviceManager,
-        0,     // minimum input channels
-        256,   // maximum input channels
-        0,     // minimum output channels
-        256,   // maximum output channels
-        false, // ability to select midi inputs
-        false, // ability to select midi output device
-        false, // treat channels as stereo pairs
-        false);
+                                        deviceManager,
+                                        0,     // minimum input channels
+                                        256,   // maximum input channels
+                                        0,     // minimum output channels
+                                        256,   // maximum output channels
+                                        false, // ability to select midi inputs
+                                        false, // ability to select midi output device
+                                        false, // treat channels as stereo pairs
+                                        false);
     audioSetupComp->setLookAndFeel(&settingsLF);
 
-    //juce::AudioDeviceManager::AudioDeviceSetup setup;
-
-    
-
-    //addAndMakeVisible(audioSetupComp);
 
     // AF: Initialize state enum
     state = Stopped;
+
+    getTopLevelComponent()->addKeyListener(this);
 
     setLookAndFeel(&customLookAndFeel);
 
@@ -75,36 +72,24 @@ MainComponent::MainComponent()
     }
 
 
-
+    //Initialize all tracks
     for (auto& track : tracksArray)
     {
         track->setMasterLoop(tempoBox.getText().getIntValue(), beatsBox.getText().getIntValue());
         addAndMakeVisible(track->panSlider);
-        //track->panSlider.setNumDecimalPlacesToDisplay(2);
-        //track->panSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
-        //addAndMakeVisible(track->panLabel);
 
         addAndMakeVisible(track->gainSlider);
         track->gainSlider.setNumDecimalPlacesToDisplay(2);
 
-        //DN: set up icons
+        //DN: set up reverse icon
         std::unique_ptr<juce::XmlElement> reverse_svg_xml(juce::XmlDocument::parse(BinaryData::fadrepeat_svg)); // GET THE SVG AS A XML
         track->reverseSVG = juce::Drawable::createFromSVG(*reverse_svg_xml.get()); // GET THIS AS DRAWABLE
         track->reverseButton.setImages(track->reverseSVG.get());
 
-        // DN: Show reverse buttons and slip controllers
         addAndMakeVisible(track->reverseButton);
-       // addAndMakeVisible(track->slipController);
-       // track->slipController.setVisible(false); //DN: don't want to see these initially
-        //track->slipController.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-        // AF: Adds record button and paints it
         addAndMakeVisible(track->recordButton);
-        //track->recordButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff5c5c));
         track->recordButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
-
         track->addChangeListener(this);
-
         addAndMakeVisible(*track);
         mixer.addInputSource(track, false);
 
@@ -124,12 +109,6 @@ MainComponent::MainComponent()
             if (track->isRecording())
             {
                 track->stopRecording();
-                
-
-                //inputAudio.setGain(0.0);  //DN: turn input monitoring off when going back to playback from recording
-
-               // track->setShouldLightUp(false);
-                //track->recordButton.setButtonText("Record");
 
                 // AF: Enable other track "Record" buttons
                 for (auto& otherTrack : tracksArray)
@@ -151,8 +130,6 @@ MainComponent::MainComponent()
                 //DN: this prevents the exception that happens if you don't have any audio card set up
                 if (deviceManager.getCurrentAudioDevice())
                 {
-                    //inputAudio.setGain(1.0);  //DN: turn input monitoring on when recording
-
                     if (!juce::RuntimePermissions::isGranted(juce::RuntimePermissions::writeExternalStorage))
                     {
                         SafePointer<MainComponent> safeThis(this);
@@ -172,11 +149,7 @@ MainComponent::MainComponent()
                         return;
                     }
 
-                    //track->recordButton.setButtonText("Stop");
-                   // track->setShouldLightUp(true);
-
-                    //AF: Make other record buttons greyed out
-                    // AF: Enable other track "Record" buttons
+                    //AF: Make other record buttons disabled
                     for (auto& otherTrack : tracksArray)
                     {
                         if (&otherTrack != &track)
@@ -184,21 +157,17 @@ MainComponent::MainComponent()
                     }
                     
                     track->setWaitingToRecord(true);
-
                     unsavedChanges = true; //if we record something we want to make sure to warn them to save it when switching projects
                 }
-
             }
         };
     }
 
     //DN: Set up default directory loop wav files and feed them to Audio track objects
     initializeTempWAVs();
-
     redrawAndBufferAudio();
 
     mixer.addInputSource(&inputAudio, false);
-
 
     addAndMakeVisible(&appTitle);
     appTitle.setJustificationType(juce::Justification::centred);
@@ -213,10 +182,6 @@ MainComponent::MainComponent()
     saveSVG = juce::Drawable::createFromSVG(*save_svg_xml.get()); // GET THIS AS DRAWABLE
     saveButton.setImages(saveSVG.get());
 
-    //std::unique_ptr<juce::XmlElement> initialize_svg_xml(juce::XmlDocument::parse(BinaryData::fadsave_svg)); // GET THE SVG AS A XML
-    //initializeSVG = juce::Drawable::createFromSVG(*initialize_svg_xml.get()); // GET THIS AS DRAWABLE
-    //initializeButton.setImages(initializeSVG.get());
-
     std::unique_ptr<juce::XmlElement> plus_svg_xml(juce::XmlDocument::parse(BinaryData::plussolid_svg)); // GET THE SVG AS A XML
     plusSVG = juce::Drawable::createFromSVG(*plus_svg_xml.get()); // GET THIS AS DRAWABLE
     plusIcon.setImages(plusSVG.get());
@@ -229,9 +194,6 @@ MainComponent::MainComponent()
     loopLengthSVG = juce::Drawable::createFromSVG(*loopLength_svg_xml.get()); // GET THIS AS DRAWABLE
     loopLengthButton.setImages(loopLengthSVG.get());
 
-
-
-    
 
     // AF: Adds play button and paints it
     addAndMakeVisible(&playButton);
@@ -246,7 +208,6 @@ MainComponent::MainComponent()
     stopButton.setEnabled(false);
 
     //DN:  add saved loops label and dropdown menu
-    //addAndMakeVisible(&savedLoopsLabel);
     addAndMakeVisible(&savedLoopsDropdown);
     addAndMakeVisible(&saveButton);
     addAndMakeVisible(&initializeButton);
@@ -256,7 +217,6 @@ MainComponent::MainComponent()
     saveButton.onClick = [this] { saveButtonClicked(); };
     saveButton.setEnabled(true);
     
-
     initializeButton.onClick = [this] { initializeButtonClicked(); };
     initializeButton.setEnabled(true);
 
@@ -278,7 +238,6 @@ MainComponent::MainComponent()
     savedLoopsDropdown.setTextWhenNothingSelected("  NO PROJECT LOADED");
     savedLoopsDropdown.setTextWhenNoChoicesAvailable("NO PROJECTS FOUND");
     savedLoopsDropdown.onChange = [this] { savedLoopSelected();  };
-
 
 
     // Some platforms require permissions to open input channels so request that here
@@ -304,7 +263,6 @@ MainComponent::MainComponent()
     unsavedProgressWarning.addKeyListener(this);
     saveProjectDialog.addKeyListener(this);  //DN:these are so we can hit Enter on the alert windows
 
-
     //sets up the alert window for when you hit Save
     saveProjectDialog.setLookAndFeel(&customLookAndFeel);
     saveProjectDialog.addTextEditor("newProjectName", "");
@@ -314,7 +272,6 @@ MainComponent::MainComponent()
     // Make sure you set the size of the component after
     // you add any child components.
     setSize(960, 700);
-
 }
 
 MainComponent::~MainComponent()
@@ -331,23 +288,11 @@ MainComponent::~MainComponent()
 //==============================================================================
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    // This function will be called when the audio device is started, or when
-    // its settings (i.e. sample rate, block size, etc) are changed.
-
-    // You can use this function to initialise any resources you might need,
-    // but be careful - it will be called on the audio thread, not the GUI thread.    
-
-   /* track1.prepareToPlay(samplesPerBlockExpected, sampleRate);
-    track2.prepareToPlay(samplesPerBlockExpected, sampleRate);
-    track3.prepareToPlay(samplesPerBlockExpected, sampleRate);
-    track4.prepareToPlay(samplesPerBlockExpected, sampleRate);*/
     mixer.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-   // bufferToFill.clearActiveBufferRegion();  //DN: start with silence, so if we need it it's already there
-
     auto* device = deviceManager.getCurrentAudioDevice();
     auto activeInputChannels = device->getActiveInputChannels();
     auto activeOutputChannels = device->getActiveOutputChannels();
@@ -363,7 +308,7 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     auto sourceBuffer = std::make_unique<juce::AudioBuffer<float>>(maxInputChannels, bufferToFill.numSamples);
 
     /// DN: This code grabs the audio input, puts it in a buffer, and sends that to an AudioSource class
-    //  which can be added to or removed from our main mixer as needed
+    //  which can be added to or removed from our main mixer
   
      //DN: if input is mono, this will write the same data twice, but that's ok
      // we need to account for the outputChannels in case it's set to mono or nothing
@@ -388,43 +333,26 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
 
     }
 
-
     //send filled buffer to the AudioSource
     inputAudio.setBuffer(sourceBuffer.release());
 
-
-    //DN: We've added the tracks to the mixer already, so this will trigger all of them
+    //DN: This gets the audio from everything that's been added to the mixer and sends it to the output
     mixer.getNextAudioBlock(bufferToFill);
 }
 
 void MainComponent::releaseResources()
 {
-    // This will be called when the audio device stops, or when it is being
-    // restarted due to a setting change.
-
-    // For more details, see the help for AudioProcessor::releaseResources()
     mixer.releaseResources();
 }
 
 //==============================================================================
 void MainComponent::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    // You can add your drawing code here!
     g.fillAll(MAIN_BACKGROUND_COLOR);
-
-
-
 }
 
 void MainComponent::resized()
 {
-    // This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
-
     auto mainFullOuterBorder = 13;
     auto rect = getLocalBounds().reduced(mainFullOuterBorder);
     auto extraRightMargin = rect.removeFromRight(5);
@@ -435,7 +363,6 @@ void MainComponent::resized()
 
     int headerHeight = 120;
     auto headerArea = rect.removeFromTop(headerHeight);
-    //audioSetupComp.setBounds(globalControlsArea.removeFromLeft(proportionOfWidth(0.5f)));
 
     auto transportButtonArea = headerArea.removeFromLeft(leftColumnWidth-5);
     int playStopMargin = 20;
@@ -450,17 +377,15 @@ void MainComponent::resized()
     int saveClearButtonsWidth = 55;
 
     auto saveButtonArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.35f);
-    saveButton.setBounds(saveButtonArea); //.removeFromBottom(saveButtonArea.getHeight() * .97));
+    saveButton.setBounds(saveButtonArea); 
     auto initializeButtonBounds = headerArea.removeFromRight(saveClearButtonsWidth);
     initializeButton.setBounds(initializeButtonBounds.reduced(5, headerHeight * 0.35f).reduced(3));
-   // plusIcon.setBounds(initializeButtonBounds.reduced(0, headerHeight * 0.21f).removeFromTop(42).removeFromRight(saveClearButtonsWidth/3.1).removeFromLeft(20));
     plusIcon.setBounds(initializeButtonBounds.reduced(17));
     auto metronomeArea = headerArea.removeFromRight(saveClearButtonsWidth).reduced(5, headerHeight * 0.33f);
     metronomeButton.setBounds(metronomeArea.removeFromTop(metronomeArea.getHeight()*0.98));
     int boxWidth = 80;
     auto cutSliverAboveTempoBeats = headerArea.removeFromTop(5);
     tempoBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
-    //auto gapBetweenBoxes = headerArea.removeFromRight(10);
     beatsBox.setBounds(headerArea.removeFromRight(boxWidth).reduced(10, headerHeight * 0.33f));
 
     rect.expand(mainFullOuterBorder,mainFullOuterBorder);
@@ -478,17 +403,12 @@ void MainComponent::resized()
         auto trackControlsR = trackArea.removeFromLeft(leftColumnWidth-200);
         trackControlsR.reduce(0, 42);
         track->reverseButton.setBounds(trackControlsR);
-       // track->slipController.setBounds(trackArea.removeFromBottom(20));
         track->setBounds(trackArea);
     }
-
-    
-
-
 }
 
 
-// AF: ========================= New Audio Playing Declarations ================================
+// AF: ========================= Audio Playing Declarations ================================
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
@@ -504,7 +424,6 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
                 for (auto& i : tracksArray)
                 {
                     i->setDisplayFullThumbnail(true);
-                    //i->recordButton.setButtonText("Record");
                     i->recordButton.setEnabled(true);
                     i->setShouldLightUp(false);
                 }
@@ -539,12 +458,16 @@ void MainComponent::stopButtonClicked()
     }
 }
 
+// AF: ========================= Save/Load Declarations ================================
+
+
 void MainComponent::saveButtonClicked()
 {
     juce::String newFolderName;
+    bool isNewProject = savedLoopsDropdown.getSelectedId() == 0;
 
     //DN: if this project is new, we need to name it/create a folder for it
-    if (savedLoopsDropdown.getSelectedId() == 0)
+    if (isNewProject)
     {
         auto result = saveProjectDialog.runModalLoop();
         if (result == 1)
@@ -588,7 +511,8 @@ void MainComponent::saveButtonClicked()
     {
         if (folderNames[i] == newFolderName)
         {
-            savedLoopsDropdown.setSelectedId(i + 1, juce::dontSendNotification); //account for dropdown index offset, don't trigger savedLoopSelected
+            //account for dropdown index offset, don't trigger savedLoopSelected
+            savedLoopsDropdown.setSelectedId(i + 1, juce::dontSendNotification); 
             currentProjectListID = i+1;
         }
             
@@ -609,6 +533,17 @@ void MainComponent::saveButtonClicked()
     juce::File destFile = savedLoopDirTree.getProjectFolder(newFolderName).getChildFile(PROJECT_STATE_XML_FILENAME);
     
     projectState.writeTo(destFile);
+
+
+    //Need feedback if you hit save on an existing project
+    if (!isNewProject)
+    {
+        juce::AlertWindow savedNotification("Project Saved!", "", juce::AlertWindow::NoIcon);
+        savedNotification.setLookAndFeel(&customLookAndFeel);
+        savedNotification.addButton("OK", 1);
+        savedNotification.runModalLoop();
+    }
+
 }
 
 void MainComponent::initializeButtonClicked()
@@ -647,6 +582,7 @@ void MainComponent::settingsButtonClicked()
     settingsHaveBeenOpened = true;
     for (auto& track : tracksArray)
     {
+
         track->setSettingsHaveBeenOpened(true);
     }
     //DN: set up settings window
@@ -663,23 +599,6 @@ void MainComponent::settingsButtonClicked()
     settingsWindow.resizable = false;
 
     settingsWindow.runModal();
-
-}
-
-void MainComponent::metronomeButtonClicked()
-{
-    if (metronome.getState() == Metronome::Stopped)
-    {
-        metronome.start();
-        metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
-        metronomeButton.setImages(metronomeSVG.get());
-    }
-    else if (metronome.getState() == Metronome::Playing) 
-    {
-        metronome.stop();
-        metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
-        metronomeButton.setImages(metronomeSVG.get());
-    }
 }
 
 void MainComponent::savedLoopSelected()
@@ -745,14 +664,6 @@ void MainComponent::savedLoopSelected()
     tempoBox.clear();
     tempoBox.setText(text);
     tempoBoxLabel.setEnabled(false);
-
-}
-
-bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
-{
-    if (originatingComponent == &unsavedProgressWarning || originatingComponent == &saveProjectDialog)
-        originatingComponent->exitModalState(1);  //DN: if someone hits enter on an Alertwindow, it's the same as clicking OK
-    return true;
 }
 
 void MainComponent::initializeTempWAVs()
@@ -783,6 +694,44 @@ void MainComponent::redrawAndBufferAudio()
         track->redrawAndBufferAudio();
     }
 
+}
+
+// =============================== MISC ============================================
+
+void MainComponent::metronomeButtonClicked()
+{
+    if (metronome.getState() == Metronome::Stopped)
+    {
+        metronome.start();
+        metronomeSVG->replaceColour(MAIN_DRAW_COLOR, METRONOME_ON_COLOR);
+        metronomeButton.setImages(metronomeSVG.get());
+    }
+    else if (metronome.getState() == Metronome::Playing)
+    {
+        metronome.stop();
+        metronomeSVG->replaceColour(METRONOME_ON_COLOR, MAIN_DRAW_COLOR);
+        metronomeButton.setImages(metronomeSVG.get());
+    }
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
+{
+    if (originatingComponent == &unsavedProgressWarning || originatingComponent == &saveProjectDialog)
+    {
+        if (key == juce::KeyPress::returnKey)
+            originatingComponent->exitModalState(1);  //DN: if someone hits enter on an Alertwindow, it's the same as clicking OK
+        else if (key == juce::KeyPress::escapeKey)
+            originatingComponent->exitModalState(0);
+    }
+    else if (key == juce::KeyPress::spaceKey)
+    {
+        if (trackCurrentlyPlaying())
+            stopButtonClicked();
+        else
+            playButtonClicked();
+    }
+
+    return true;
 }
 
 bool MainComponent::trackCurrentlyPlaying()

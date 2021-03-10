@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AudioTrack.h"
+#include "InputMonitor.h"
 #include "Metronome.h"
 #include "BinaryData.h"
 
@@ -8,8 +9,8 @@
 
 //==============================================================================
 /*
-    This component lives inside our window, and this is where you should put all
-    your controls and content.
+    This component lives inside our window, and contains all
+    controls and content.
 */
 class MainComponent  : public juce::AudioAppComponent,
                        public juce::ChangeListener,
@@ -30,8 +31,6 @@ public:
     void paint (juce::Graphics& g) override;
     void resized() override;
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-
-
 
 
     //==============================================================================
@@ -84,68 +83,57 @@ private:
 
     //Header
     juce::Label appTitle{ "appTitle" ,"L O O P S P A C E"};
+
+
     // Global controls
-
-    //std::unique_ptr<juce::Drawable> stopSVG;
-    //juce::DrawableButton stopButton{ "stopButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-
     TransportButton stopButton{ "stopButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Stop };
     TransportButton playButton{ "playButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Play };
     
-    //std::unique_ptr<juce::Drawable> playSVG;
-    //juce::DrawableButton playButton{ "playButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-    
-    //juce::Label savedLoopsLabel{ "savedLoopLabel","Current Project File" };
+    juce::TextEditor tempoBox;
+    juce::Label tempoBoxLabel;
+    juce::TextEditor beatsBox;
+    juce::Label beatsBoxLabel;
+
+    Metronome metronome;
+    std::unique_ptr<juce::Drawable> metronomeSVG;
+    juce::DrawableButton metronomeButton{ "metronomeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
+
     juce::ComboBox savedLoopsDropdown{ "savedLoopsDropdown" };
     DirectoryTree savedLoopDirTree;
 
-
     std::unique_ptr<juce::Drawable> saveSVG;
     juce::DrawableButton saveButton{ "saveButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-    //std::unique_ptr<juce::Drawable> initializeSVG;
-    //juce::DrawableButton initializeButton{ "initializeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
     NewFileButton initializeButton{ "initializeButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR };
     juce::DrawableButton plusIcon{ "plusIcon",juce::DrawableButton::ButtonStyle::ImageFitted };
     std::unique_ptr<juce::Drawable> plusSVG;
 
     std::unique_ptr<juce::Drawable> settingsSVG;
     juce::DrawableButton settingsButton{ "settingsButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-    //juce::TextButton saveButton{ "SAVE" };
-    //juce::TextButton initializeButton{ "NEW" };
-   // juce::TextButton settingsButton{ "SETTINGS" };
 
     std::unique_ptr<juce::Drawable> loopLengthSVG;
     LoopLengthButton loopLengthButton{ "loopLengthButton",juce::DrawableButton::ButtonStyle::ImageFitted };
 
+
+    // Dialog Windows
     juce::AlertWindow saveProjectDialog{ "Save Project","Enter the name of your Loop Project:",juce::AlertWindow::AlertIconType::NoIcon };
     juce::AlertWindow unsavedProgressWarning{ "Unsaved Progress Warning","You will lose any unsaved progress.  Continue?",juce::AlertWindow::AlertIconType::WarningIcon };
+    
+    // flags etc
     bool unsavedChanges = false; //DN: determines whether to warn about unsaved progress when switching projects
     int currentProjectListID = 0; //DN: keep track of where we are in the project list.  Update this when changing the dropdown
+    bool settingsHaveBeenOpened = false; //DN: set to true once someone hits settings the first time
 
-    bool settingsHaveBeenOpened = false; //DN: set to true once someone hits settings
-
+    //UI
     CustomLookAndFeel customLookAndFeel;
     SettingsLookAndFeel settingsLF;
 
-
+    // Tracks / DSP
     juce::OwnedArray<AudioTrack> tracksArray;
 
+    InputMonitor inputAudio;
     juce::MixerAudioSource mixer;
 
     TransportState state;
-
-    InputMonitor inputAudio;
-
-    Metronome metronome;
-    //juce::TextButton metronomeButton{ "METRONOME" };
-    std::unique_ptr<juce::Drawable> metronomeSVG;
-    juce::DrawableButton metronomeButton{ "metronomeButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-
-
-    juce::TextEditor tempoBox;
-    juce::Label tempoBoxLabel;
-    juce::TextEditor beatsBox;
-    juce::Label beatsBoxLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

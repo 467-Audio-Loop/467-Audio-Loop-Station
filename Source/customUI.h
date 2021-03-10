@@ -2,8 +2,6 @@
   ==============================================================================
 
     customUI.h
-    Created: 26 Feb 2021 9:46:53pm
-    Author:  dnego
 
     header file containing custom classes for our loopstation UI
   ==============================================================================
@@ -23,6 +21,7 @@
 #define METRONOME_ON_COLOR juce::Colours::limegreen
 #define EDITOR_FONT juce::Font(14.0f,juce::Font::bold)
 #define LABEL_FONT juce::Font(14.0f,juce::Font::bold)
+#define VERTICAL_LINE_COLOR juce::Colours::black
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -195,10 +194,8 @@ public:
             if (!isTwoVal)
             {
                 g.setColour(MAIN_DRAW_COLOR);
-                //g.fillEllipse(juce::Rectangle<float>(static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre(isThreeVal ? thumbPoint : maxPoint));
-                
+
                 juce::Rectangle<float> knobArea;
-                //g.fillRoundedRectangle(knobArea.getTopLeft().getX(),knobArea.getTopLeft.getY(),knobArea.getWidth(),knobArea.getHeight());
                 if (slider.isHorizontal())
                 {
                     knobArea = juce::Rectangle<float>(static_cast<float> (thumbWidth*1.4), static_cast<float> (thumbWidth*1.4)).withCentre(isThreeVal ? thumbPoint : maxPoint);
@@ -287,11 +284,10 @@ public:
 
             g.setFont(font);
 
-            auto iconArea = r.removeFromLeft(1.0f);// juce::roundToInt(maxFontHeight)).toFloat();
+            auto iconArea = r.removeFromLeft(1.0f);
 
             if (icon != nullptr)
             {
-                //icon->drawWithin(g, iconArea, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
                 r.removeFromLeft(juce::roundToInt(maxFontHeight * 0.5f));
             }
             else if (isTicked)
@@ -324,7 +320,6 @@ public:
                 f2.setHeight(f2.getHeight() * 0.75f);
                 f2.setHorizontalScale(0.95f);
                 g.setFont(f2);
-
                 g.drawText(shortcutKeyText, r, juce::Justification::centredRight, true);
             }
         }
@@ -497,11 +492,7 @@ public:
         path = path.createPathWithRoundedCorners(0.5);
         setShape(path, 1, 1, 0);
         setOutline(MAIN_DRAW_COLOR, NEW_FILE_LINE_THICKNESS);
-
     }
-
-private:
-
 };
 
 
@@ -515,7 +506,6 @@ public:
     LoopLengthButton(const juce::String& buttonName,
         ButtonStyle buttonStyle) : juce::DrawableButton(buttonName,buttonStyle)
     {
-
     }
 
     void mouseEnter(const juce::MouseEvent& event)
@@ -523,7 +513,6 @@ public:
         if (isEnabled())
             setMouseCursor(juce::MouseCursor::DraggingHandCursor);
     }
-
 
     void mouseExit(const juce::MouseEvent& event)
     {
@@ -541,23 +530,15 @@ public:
         if (isEnabled())
         {
             int distance = event.getDistanceFromDragStartX();
-           // DBG("distance = " + juce::String(distance));
-            int difference = distance / 35;
+            int difference = distance / 35;  // magic number for scaling your drag.
             newBeats = oldBeats + difference;
             if (newBeats < 1)
                 newBeats = 1;
             if (newBeats > 32)
                 newBeats = 32;
 
-           // DBG("new beats = " + juce::String(newBeats));
             beatsBox->setText(juce::String(newBeats), true);
         }
-
-    }
-
-    void mouseUp(const juce::MouseEvent& event)
-    {
-
     }
 
     void setBeatsBox(juce::TextEditor* newBeatsBox)
@@ -565,12 +546,8 @@ public:
         beatsBox = newBeatsBox;
     }
 
-
 private:
     int oldBeats = 8;
     int newBeats = 8;
     juce::TextEditor* beatsBox;
-
-    bool shouldDrawButtonAsDown = false;
-    juce::BorderSize<int> border;
 };

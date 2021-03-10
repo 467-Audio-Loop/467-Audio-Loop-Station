@@ -2,9 +2,6 @@
   ==============================================================================
 
     LoopAudioTransportSource.h
-    Created: 3 Feb 2021 10:37:23am
-    Author:  dnego
-
 
     DN:  This is a class based loosely on JUCE's AudioTransportSource, to achieve 
     similar function, but allow sample-level control of the playback using
@@ -114,7 +111,6 @@ public:
                 playing = true;
                 stopped = false;
             }
-
             sendChangeMessage();
         }
     }
@@ -125,11 +121,6 @@ public:
         if (playing)
         {
             playing = false;
-
-            int n = 500;
-            //while (--n >= 0 && !stopped)
-            //    juce::Thread::sleep(2);
-
             sendChangeMessage();
         }
     }
@@ -190,8 +181,6 @@ public:
                 }
             }
 
-
-
             // Check for beginning of file
             if (hitLoopEnd)
                 beginningOfFile = true;
@@ -199,7 +188,6 @@ public:
                 beginningOfFile = false;
 
             position = pos;
-
 
             if (!playing)
             {
@@ -213,11 +201,6 @@ public:
             }
 
             stopped = !playing;
-
-
-            //DN: this was for gain control changes, to avoid pops and clicks I think - might need later if we add a gain slider
-           // for (int i = bufferToFill.buffer->getNumChannels(); --i >= 0;)
-           //     info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
         }
     }
 
@@ -270,7 +253,6 @@ private:
 
     int masterLoopTempo;
     int masterLoopBeatsPerLoop;
-
     int masterLoopLength; //DN: length in SAMPLES of the loop, so this depends on tempo, measures ,timesig, and sample Rate
 
 

@@ -2,176 +2,21 @@
   ==============================================================================
 
     AudioTrack.h
-    Created: 26 Jan 2021 3:52:53pm
-    Author:  dnego
+
+    A class to represent an Audio Track.  Contains all track-specific controls and
+    methods.  Inherits from AudioIODeviceCallback to allow passing input data to
+    the Audio Recorder class, parallel to our main audio processing chain.
 
   ==============================================================================
 */
 
 #pragma once
 
-#include "AudioLiveScrollingDisplay.h"
+#include "AudioRecorder.h"
 #include "LoopSource.h"
 #include "SaveLoad.h"
 #include "customUI.h"
 
-
-
-
-//==============================================================================
-/** A simple class that acts as an AudioIODeviceCallback and writes the
-    incoming audio data to a WAV file.
-*/
-class AudioRecorder : public juce::AudioIODeviceCallback, public juce::ChangeBroadcaster
-{
-public:
-    AudioRecorder(juce::AudioThumbnail& thumbnailToUpdate)
-        : thumbnail(thumbnailToUpdate)
-    {
-        backgroundThread.startThread();
-        
-
-    }
-
-    ~AudioRecorder() override
-    {
-        stop();
-    }
-
-    //==============================================================================
-    void startRecording(const juce::File& file)
-    {
-
-        stop();
-
-        if (sampleRate > 0)
-        {
-            // Create an OutputStream to write to our destination file...
-            file.deleteFile();
-
-            if (auto fileStream = std::unique_ptr<juce::FileOutputStream>(file.createOutputStream()))
-            {
-                // Now create a WAV writer object that writes to our output stream...
-                juce::WavAudioFormat wavFormat;
-
-                if (auto writer = wavFormat.createWriterFor(fileStream.get(), sampleRate, inputChannels, 16, {}, 0))
-                {
-
-                    if (writer->getNumChannels() != 0)
-                    {
-                                            fileStream.release(); // (passes responsibility for deleting the stream to the writer object that is now using it)
-
-                    // Now we'll create one of these helper objects which will act as a FIFO buffer, and will
-                    // write the data to disk on our background thread.
-                    threadedWriter.reset(new juce::AudioFormatWriter::ThreadedWriter(writer, backgroundThread, 32768));
-
-                    // Reset our recording thumbnail
-                    thumbnail.reset(writer->getNumChannels(), writer->getSampleRate());
-                    nextSampleNum = 0;
-
-                    // And now, swap over our active writer pointer so that the audio callback will start using it..
-                    const juce::ScopedLock sl(writerLock);
-                    activeWriter = threadedWriter.get();
-                    }
-
-                }
-            }
-        }
-    }
-
-    void stop()
-    {
-        // First, clear this pointer to stop the audio callback from using our writer object..
-        {
-            const juce::ScopedLock sl(writerLock);
-            activeWriter = nullptr;
-        }
-
-        // Now we can delete the writer object. It's done in this order because the deletion could
-        // take a little time while remaining data gets flushed to disk, so it's best to avoid blocking
-        // the audio callback while this happens.
-        threadedWriter.reset();
-    }
-
-
-    bool isRecording() const
-    {
-        return activeWriter.load() != nullptr;
-    }
-
-    //==============================================================================
-    void audioDeviceAboutToStart(juce::AudioIODevice* device) override
-    {
-        sampleRate = device->getCurrentSampleRate();
-
-        // AF: Get number of input channels
-        auto activeInputChannels = device->getActiveInputChannels();
-        inputChannels = activeInputChannels.countNumberOfSetBits();
-
-        if (!settingsHaveBeenOpened && inputChannels > 1)
-            inputChannels = 1;
-
-        // AF: Get number of output channels
-        auto activeOutputChannels = device->getActiveOutputChannels();
-        outputChannels = activeOutputChannels.countNumberOfSetBits();
-    }
-
-    void audioDeviceStopped() override
-    {
-        sampleRate = 0;
-    }
-
-    void audioDeviceIOCallback(const float** inputChannelData, int numInputChannels,
-        float** outputChannelData, int numOutputChannels,
-        int numSamples) override
-    {
-        const juce::ScopedLock sl(writerLock);
-
-        if (activeWriter.load() != nullptr && numInputChannels >= thumbnail.getNumChannels())
-        {
-            activeWriter.load()->write(inputChannelData, numSamples);
-
-            // Create an AudioBuffer to wrap our incoming data, note that this does no allocations or copies, it simply references our input data
-            juce::AudioBuffer<float> buffer(const_cast<float**> (inputChannelData), thumbnail.getNumChannels(), numSamples);
-            thumbnail.addBlock(nextSampleNum, buffer, 0, numSamples);
-            nextSampleNum += numSamples;
-        }
-
-        // We need to clear the output buffers, in case they're full of junk..
-        for (int i = 0; i < numOutputChannels; ++i)
-            if (outputChannelData[i] != nullptr)
-                juce::FloatVectorOperations::clear(outputChannelData[i], numSamples);
-    }
-
-    int getInputChannels() 
-    {
-        return inputChannels;
-    }
-
-    int getOutputChannels()
-    {
-        return outputChannels;
-    }
-
-    bool settingsHaveBeenOpened = false;
-
-private:
-    juce::AudioThumbnail& thumbnail;
-    juce::TimeSliceThread backgroundThread{ "Audio Recorder Thread" }; // the thread that will write our audio data to disk
-    std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter; // the FIFO used to buffer the incoming data
-    int inputChannels = 1;
-    int outputChannels = 2;
-    double sampleRate = 0.0;
-    juce::int64 nextSampleNum = 0;
-
-    juce::CriticalSection writerLock;
-    std::atomic<juce::AudioFormatWriter::ThreadedWriter*> activeWriter{ nullptr };
-};
-
-
-//==============================================================================
-// DN:  I retooled what was the "RecordingThumbail" class, which was just a 
-// Component, into an AudioAppComponent that will handle each track's playback
 
 class AudioTrack : public juce::AudioAppComponent,
     private juce::ChangeListener, public juce::ChangeBroadcaster, public juce::AudioIODeviceCallback,
@@ -191,8 +36,6 @@ public:
         panSlider.addListener(this);
         panSlider.setDoubleClickReturnValue(true, 0.0, juce::ModifierKeys::altModifier);
         panSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
-       // panLabel.setText("L/R", juce::dontSendNotification);
-        //panLabel.attachToComponent(&panSlider, false);
 
         slipController.addListener(this);
         slipController.setRange(-loopSource.getMasterLoopLength(), loopSource.getMasterLoopLength());
@@ -205,14 +48,11 @@ public:
         gainSlider.setDoubleClickReturnValue(true, 1.0, juce::ModifierKeys::altModifier);
         gainSlider.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
         gainSlider.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
-        //gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
 
         reverseButton.addListener(this);
 
-        startTimer(10); //used for vertical line position marker
-
+        startTimer(10); //fires every 10ms
     }
-
 
 
     ~AudioTrack() override
@@ -221,8 +61,7 @@ public:
         deviceManager.removeAudioCallback(&recorder);
     }
 
-    //DN:: added along with AudioDeviceIOCallback to get mainComponent to tell this which tells the recorder when to start
-    // sending audio data
+    //DN:: Gives this class access to the buffer
     void audioDeviceIOCallback(const float** inputChannelData,
         int numInputChannels,
         float** outputChannelData,
@@ -245,9 +84,6 @@ public:
         recorder.audioDeviceStopped();
     } 
 
-    //DN:  we don't need this anymore, using the thumbnail within the class
-    //juce::AudioThumbnail& getAudioThumbnail() { return thumbnail; }
-
     void setDisplayFullThumbnail(bool displayFull)
     {
         displayFullThumb = displayFull;
@@ -257,11 +93,14 @@ public:
     void paint(juce::Graphics& g) override
     {
         auto thumbnailBorder = 8;
+        juce::Colour trackColor;
         g.fillAll(MAIN_BACKGROUND_COLOR);
         if (shouldLightUp)
-            g.setColour(juce::Colours::red);
+            trackColor = juce::Colours::red;
         else
-            g.setColour(MAIN_DRAW_COLOR);
+            trackColor = MAIN_DRAW_COLOR;
+
+        g.setColour(trackColor);
         const juce::Rectangle<float> area(getLocalBounds().reduced(thumbnailBorder).toFloat());
         g.drawRoundedRectangle(area, ROUNDED_CORNER_SIZE, THIN_LINE);
 
@@ -275,13 +114,18 @@ public:
             
             thumbnail.drawChannels(g, thumbArea, startTime, endTime, 1.0f); // 1.0f is zoom
 
-
             //DN: paint vertical line to indicate playhead position
-            g.setColour(MAIN_DRAW_COLOR);
+            g.setColour(VERTICAL_LINE_COLOR);
             auto audioPosition = (float)loopSource.getPosition();
             auto drawPosition = (audioPosition / loopSource.getMasterLoopLength()) * (float)thumbArea.getWidth() + (float)thumbArea.getX();            
-            g.drawLine(drawPosition, (float)thumbArea.getY()+8, drawPosition, (float)thumbArea.getBottom()-8, 2.0f);                       
+            g.drawLine(drawPosition, (float)thumbArea.getY()+8, drawPosition, (float)thumbArea.getBottom()-8, 2.0f);      
 
+
+            //DN: horizontal line that always goes all the way across even if our audio is shorter
+            g.setColour(trackColor);
+            int midpoint = getLocalBounds().getHeight() / 2.0f;
+            int width = getLocalBounds().getWidth();
+            g.drawLine(8, midpoint, width-8, midpoint, 2);
         }
     }
 
@@ -337,9 +181,6 @@ public:
         //DN: this is where we set the bool that will auto-stop recording at the end of the loop
         if (isRecording() && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
         {
-            DBG("position = " + juce::String(loopSource.getPosition()));
-            DBG("looplength = " + juce::String(loopSource.getMasterLoopLength()));
-            DBG("SETTING ABOUT TO OVERFLOW");
             aboutToOverflow = true;
         }
     }
@@ -420,6 +261,7 @@ public:
         loopSource.setNextReadPosition(newPosition);
     }
 
+    // Playback mode
     void start()
     {
         loopSource.start(0);
@@ -437,17 +279,10 @@ public:
         repaint();
     }
 
-    // AF: Same function from LoopSource.h in order to access it from MainComponent.cpp
-    void setFileStartOffset(int newStartOffset)
-    {
-        loopSource.setFileStartOffset(newStartOffset);
-    }
-
     int getPosition()
     {
         return loopSource.getPosition();
     }
-
 
     //make sure to set this up before calling startRecording()
     void setLastRecording(juce::File file)
@@ -504,7 +339,6 @@ public:
         }
 
         repaint();
-
     }
 
     //DN: helper function to draw the thumbnail
@@ -597,7 +431,6 @@ public:
             loopSource.reverseAudio();
             redrawThumbnailWithBuffer(loopSource.getLoopBuffer());
         }
-
     }
 
     void initializeTrackState()
@@ -640,23 +473,19 @@ public:
         recorder.settingsHaveBeenOpened = newValue;
     }
 
-    // AF: Slider for panning
+
     juce::Slider panSlider;
     juce::Label panLabel;
     double panSliderValue = 0.0;
 
-    //juce::TextButton reverseButton{ "Reverse" };
     std::unique_ptr<juce::Drawable> reverseSVG;// = juce::Drawable::createFromSVG(*svg_xml_1); // GET THIS AS DRAWABLE
     juce::DrawableButton reverseButton{ "reverseButton",juce::DrawableButton::ButtonStyle::ImageFitted };
-
 
     juce::Slider slipController;
     juce::Slider gainSlider;
     double gainSliderValue = 1.0;
 
 
-
-    //juce::TextButton recordButton{ "Record" };
     TransportButton recordButton{ "recordButton",MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR,MAIN_BACKGROUND_COLOR, TransportButton::TransportButtonRole::Record };
 
 
@@ -727,28 +556,6 @@ private:
         {
             repaint();
         }
-            
-        /* DN: trying new timer way
-        
-        if (aboutToOverflow)
-        {
-            DBG("STOP RECORDING CALLED");
-            stopRecording();
-            aboutToOverflow = false;
-        }
-
-
-        // AF: Stop recording once loop reaches max length
-        //if (source == &thumbnail && (loopSource.getMasterLoopLength() - loopSource.getPosition() < samplesPerBlock))
-        if (source == &thumbnail && (loopSource.getPosition() + samplesPerBlock >= loopSource.getMasterLoopLength()))
-        {
-            DBG("SETTING ABOUT TO OVERFLOW");
-            //stopRecording();
-            //repaint();
-            aboutToOverflow = true;
-        }
-        
-        */
 
         //DN: any time any change happens check if we need to turn on/off slip controller
         if (!lastRecording.exists())
@@ -767,65 +574,4 @@ private:
 };
 
 
-
-
-//DN:  A simple AudioSource class where we can send the audio input in buffer form, to be read from by our main mixer
-class InputMonitor : public juce::AudioSource
-{
-public:
-    InputMonitor()
-    {
-        inputBuffer.reset(new juce::AudioBuffer<float>(2, 0));
-    }
-    ~InputMonitor()
-    {
-
-    }
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate)
-    {
-        
-    }
-    void releaseResources()
-    {
-
-    }
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) 
-    {
-        
-
-        int loopBufferSize = inputBuffer->getNumSamples();
-        int maxInChannels =  inputBuffer->getNumChannels();
-
-        int maxOutChannels = bufferToFill.buffer->getNumChannels();
-
-        if (loopBufferSize > 0 && maxInChannels > 0)
-        {
-            for (int i = 0; i < maxOutChannels; ++i)
-            {
-                auto writer = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
-
-                for (auto sample = 0; sample < bufferToFill.numSamples; ++sample)
-                {
-                    writer[sample] = inputBuffer->getSample(i % maxInChannels, juce::jmin(sample, loopBufferSize)) * gain;
-                }
-            }
-        }
-
-    }
-
-    void setBuffer(juce::AudioSampleBuffer* newBuffer)
-    {
-        inputBuffer.reset(newBuffer);
-    }
-
-    void setGain(double newGain)
-    {
-        gain = newGain;
-    }
-
-private:
-    std::unique_ptr<juce::AudioBuffer<float>> inputBuffer;
-    double gain = 1.0;
-
-};
 
